@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "demo@quotemaster.pro",
+      "password": "$2a$10$XFE/UaYjotblGmLVVl7xF.hKrjXIHGhPZtWXpGZ1OBzxKlKv8HnSG",
+      "business_name": "Demo Business",
+      "business_phone": "123-456-7890",
+      "business_address": "123 Demo St, Demo City, 12345",
+      "logo_url": null
+    }
+  ],
+  "quotes": []
+}
