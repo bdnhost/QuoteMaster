@@ -1,0 +1,23 @@
+# QuoteMaster Pro - Vercel Environment Variables
+# Copy and paste these into Vercel Dashboard > Settings > Environment Variables
+
+# Gemini AI API Key for quote generation
+VITE_GEMINI_API_KEY=AIzaSyBfs0V4mPiOHadz-vscHdIFR8rTFgNgF8g
+
+# Backend API URL for production (update with your actual backend URL)
+VITE_API_URL=https://your-backend-url.com
+
+# Backend API URL for development
+VITE_API_URL_DEV=http://localhost:3001
+
+# App Environment
+VITE_APP_ENV=production
+
+# App Name and Version
+VITE_APP_NAME=QuoteMaster Pro
+VITE_APP_VERSION=1.0.0
+
+# Feature Flags
+VITE_ENABLE_AI_FEATURES=true
+VITE_ENABLE_ANALYTICS=false
+VITE_ENABLE_DEBUG=false
