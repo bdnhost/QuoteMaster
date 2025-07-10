@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap');
+
+body {
+  font-family: 'Assistant', sans-serif;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #quote-preview, #quote-preview * {
+    visibility: visible;
+  }
+  #quote-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,12 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-if (!process.env.API_KEY) {
-  // In a real app, this would be handled more gracefully, maybe disabling the AI feature.
-  console.error("API_KEY environment variable not set.");
+// In Vite, environment variables must be prefixed with VITE_
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey) {
+  console.warn("VITE_GEMINI_API_KEY environment variable not set. AI features will be disabled.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const itemsSchema = {
   type: Type.ARRAY,
@@ -34,6 +36,10 @@ const itemsSchema = {
 
 export const generateQuoteItems = async (prompt: string): Promise<Omit<{id: string, description: string, quantity: number, unitPrice: number }, 'id'>[]> => {
   try {
+    if (!ai) {
+      throw new Error("AI service not available. Please configure VITE_GEMINI_API_KEY.");
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `בהתבסס על הבקשה הבאה, צור רשימת פריטים להצעת מחיר. חשב מחירים הגיוניים בשקלים חדשים (ILS) לשוק הישראלי.
