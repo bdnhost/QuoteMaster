@@ -7,6 +7,10 @@ import type { Quote, User, ActivityLog, SystemSettings } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import StatusDropdown from '../components/ui/StatusDropdown';
+import UserManagement from '../components/admin/UserManagement';
+import QuoteManagement from '../components/admin/QuoteManagement';
+import PaymentManagement from '../components/admin/PaymentManagement';
+import SystemSettings from '../components/admin/SystemSettings';
 
 const AdminDashboardPage: React.FC = () => {
     const { user } = useAuth();
@@ -15,7 +19,7 @@ const AdminDashboardPage: React.FC = () => {
     const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
     const [settings, setSettings] = useState<SystemSettings>({});
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'quotes' | 'users' | 'activity' | 'settings'>('quotes');
+    const [activeTab, setActiveTab] = useState<'quotes' | 'users' | 'activity' | 'payments' | 'settings'>('quotes');
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
     const [updatingUserRole, setUpdatingUserRole] = useState<string | null>(null);
 
@@ -191,6 +195,17 @@ const AdminDashboardPage: React.FC = () => {
                     </button>
                     <button
                         type="button"
+                        onClick={() => setActiveTab('payments')}
+                        className={`py-2 px-2 md:px-1 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                            activeTab === 'payments'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                    >
+                        ניהול תשלומים
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setActiveTab('settings')}
                         className={`py-2 px-2 md:px-1 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
                             activeTab === 'settings'
@@ -267,51 +282,7 @@ const AdminDashboardPage: React.FC = () => {
             )}
 
             {activeTab === 'users' && (
-                <Card title="ניהול משתמשים">
-                    {isLoading ? (
-                        <p>טוען משתמשים...</p>
-                    ) : users.length === 0 ? (
-                        <div className="text-center py-12">
-                            <h3 className="text-lg font-medium text-slate-800">אין משתמשים במערכת</h3>
-                            <p className="text-slate-500 mt-2">משתמשים יופיעו כאן לאחר הרישום.</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-right">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="p-3 font-semibold text-slate-600">אימייל</th>
-                                        <th className="p-3 font-semibold text-slate-600">שם עסק</th>
-                                        <th className="p-3 font-semibold text-slate-600">טלפון</th>
-                                        <th className="p-3 font-semibold text-slate-600">תפקיד</th>
-                                        <th className="p-3 font-semibold text-slate-600">תאריך הצטרפות</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {users.map((user) => (
-                                        <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                            <td className="p-3 font-medium text-slate-900">{user.email}</td>
-                                            <td className="p-3">{user.businessInfo.name}</td>
-                                            <td className="p-3">{user.businessInfo.phone}</td>
-                                            <td className="p-3">
-                                                <select
-                                                    value={user.role}
-                                                    onChange={(e) => handleUserRoleChange(user.id, e.target.value as 'admin' | 'user')}
-                                                    disabled={updatingUserRole === user.id}
-                                                    className="text-xs px-2 py-1 border border-gray-300 rounded"
-                                                >
-                                                    <option value="user">משתמש</option>
-                                                    <option value="admin">אדמין</option>
-                                                </select>
-                                            </td>
-                                            <td className="p-3">{formatDate(user.createdAt || '')}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
+                <UserManagement />
             )}
 
             {/* Activity Log Tab */}
@@ -358,36 +329,17 @@ const AdminDashboardPage: React.FC = () => {
 
             {/* Settings Tab */}
             {activeTab === 'settings' && (
-                <Card title="הגדרות מערכת" actions={
-                    <Button onClick={() => window.location.hash = '#/payments'}>
-                        הגדרות תשלומים מתקדמות
-                    </Button>
-                }>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.entries(settings).map(([key, setting]) => (
-                            <div key={key} className="bg-slate-50 p-4 rounded-lg">
-                                <h3 className="font-semibold text-slate-800 mb-2">
-                                    {setting.description || key}
-                                </h3>
-                                <p className="text-sm text-slate-600 mb-2">
-                                    סוג: {setting.type}
-                                </p>
-                                <div className="text-lg font-medium text-blue-600">
-                                    {typeof setting.value === 'boolean'
-                                        ? (setting.value ? 'כן' : 'לא')
-                                        : String(setting.value)
-                                    }
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {Object.keys(settings).length === 0 && (
-                        <div className="text-center py-12">
-                            <h3 className="text-lg font-medium text-slate-800">אין הגדרות זמינות</h3>
-                            <p className="text-slate-500 mt-2">הגדרות המערכת יופיעו כאן.</p>
-                        </div>
-                    )}
-                </Card>
+                <SystemSettings />
+            )}
+
+            {/* Payments Tab */}
+            {activeTab === 'payments' && (
+                <PaymentManagement />
+            )}
+
+            {/* Quotes Tab */}
+            {activeTab === 'quotes' && (
+                <QuoteManagement />
             )}
         </div>
     );
