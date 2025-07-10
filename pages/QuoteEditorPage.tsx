@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Quote } from '../types';
 import * as api from '../services/apiService';
+import { SupabaseQuoteService } from '../services/supabaseQuoteService';
 import QuoteForm from '../components/QuoteForm';
 import QuotePreview from '../components/QuotePreview';
 import Button from '../components/ui/Button';
@@ -28,9 +29,9 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
         let quoteData;
         if (quoteId === 'new') {
           if(!user) throw new Error("User not found");
-          quoteData = await api.getNewQuote(user.businessInfo);
+          quoteData = await SupabaseQuoteService.createNewQuote();
         } else if (quoteId) {
-          quoteData = await api.getQuote(quoteId);
+          quoteData = await SupabaseQuoteService.getQuote(quoteId);
         } else {
           throw new Error("No quote ID provided.");
         }
@@ -55,10 +56,15 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
     if (!quote) return;
     setIsSaving(true);
     try {
-      await api.saveQuote(quote);
-      // On successful save of a new quote, update the URL to reflect its new ID
+      let savedQuote;
       if (quoteId === 'new') {
-          window.location.hash = `#/quotes/${quote.id}`;
+        savedQuote = await SupabaseQuoteService.createQuote(quote);
+        // Update the URL to reflect the new quote ID
+        window.location.hash = `#/quotes/${savedQuote.id}`;
+        setQuote(savedQuote);
+      } else {
+        savedQuote = await SupabaseQuoteService.updateQuote(quote.id!, quote);
+        setQuote(savedQuote);
       }
     } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to save quote.");

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Quote } from '../types';
 import * as api from '../services/apiService';
+import { SupabaseQuoteService } from '../services/supabaseQuoteService';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import StatusDropdown from '../components/ui/StatusDropdown';
@@ -21,7 +22,7 @@ const DashboardPage: React.FC = () => {
     useEffect(() => {
         const fetchQuotes = async () => {
             try {
-                const data = await api.getQuotes();
+                const data = await SupabaseQuoteService.getQuotes();
                 setQuotes(data);
             } catch (error) {
                 console.error("Failed to fetch quotes", error);
