@@ -1,14 +1,12 @@
 # QuoteMaster Pro - Vercel Environment Variables
 # Copy and paste these into Vercel Dashboard > Settings > Environment Variables
 
+# Supabase Configuration
+VITE_SUPABASE_URL=https://ejlvzkwoawxdkwfupmxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqbHZ6a3dvYXd4ZGt3ZnVwbXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxMjc4ODUsImV4cCI6MjA2NzcwMzg4NX0.CdzMhNYVfGrKoTFOgz7JOKnMlSOtynXL2yEB9lDP78M
+
 # Gemini AI API Key for quote generation
 VITE_GEMINI_API_KEY=AIzaSyXXXXX
-
-# Backend API URL for production (update with your actual backend URL)
-VITE_API_URL=https://your-backend-url.com
-
-# Backend API URL for development
-VITE_API_URL_DEV=http://localhost:3001
 
 # App Environment
 VITE_APP_ENV=production

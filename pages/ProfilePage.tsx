@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import * as api from '../services/apiService';
 import type { BusinessInfo } from '../types';
 import Card from '../components/ui/Card';

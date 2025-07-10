@@ -1,7 +1,7 @@
 
 import React from 'react';
 import Header from './components/Header';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/SupabaseAuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';

@@ -3,6 +3,7 @@
 ## 📋 משתני סביבה ליבוא ב-Vercel
 
 ### שלב 1: כניסה ל-Vercel Dashboard
+
 1. לך ל-https://vercel.com/dashboard
 2. בחר את הפרויקט **QuoteMaster**
 3. לחץ על **Settings**
@@ -13,20 +14,24 @@
 הוסף את המשתנים הבאים **אחד אחד**:
 
 #### 🔑 Gemini AI API Key
+
 ```
 Name: VITE_GEMINI_API_KEY
 Value: AIzaXXXXXXXXXXXX
 Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
-#### 🌐 Backend API URL (Production)
+#### 🌐 Backend API URL (Production) - זמני
+
 ```
 Name: VITE_API_URL
-Value: https://your-backend-url.com
+Value: https://jsonplaceholder.typicode.com
 Environments: ✅ Production ✅ Preview
+Note: זה זמני עד שתפרוס את ה-Backend
 ```
 
 #### 🛠️ Backend API URL (Development)
+
 ```
 Name: VITE_API_URL
 Value: http://localhost:3001
@@ -34,6 +39,7 @@ Environments: ✅ Development
 ```
 
 #### 📱 App Environment
+
 ```
 Name: VITE_APP_ENV
 Value: production
@@ -41,6 +47,7 @@ Environments: ✅ Production ✅ Preview
 ```
 
 #### 🏷️ App Name
+
 ```
 Name: VITE_APP_NAME
 Value: QuoteMaster Pro
@@ -48,6 +55,7 @@ Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
 #### 📊 Feature Flags
+
 ```
 Name: VITE_ENABLE_AI_FEATURES
 Value: true
@@ -67,6 +75,7 @@ Environments: ✅ Development
 ```
 
 ### שלב 3: פריסה מחדש
+
 1. לחץ על **Deployments**
 2. בחר את הפריסה האחרונה
 3. לחץ על **⋯** (שלוש נקודות)
@@ -77,6 +86,7 @@ Environments: ✅ Development
 ## 🔍 בדיקה
 
 אחרי הפריסה, בדוק:
+
 - ✅ האתר נטען ללא דף לבן
 - ✅ אין אזהרות Tailwind CSS בקונסול
 - ✅ תכונת AI עובדת (אם הגדרת את המפתח)
@@ -91,6 +101,7 @@ Environments: ✅ Development
 ## 📞 תמיכה
 
 אם יש בעיות:
+
 1. בדוק שכל משתני הסביבה הוגדרו נכון
 2. וודא שהפריסה בוצעה מחדש
 3. בדוק את הלוגים ב-Vercel Dashboard

@@ -6,7 +6,7 @@ import QuoteForm from '../components/QuoteForm';
 import QuotePreview from '../components/QuotePreview';
 import Button from '../components/ui/Button';
 import StatusDropdown from '../components/ui/StatusDropdown';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 
 interface QuoteEditorPageProps {
   quoteId?: string;

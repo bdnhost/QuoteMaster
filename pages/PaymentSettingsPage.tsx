@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import * as api from '../services/apiService';
 import type { PaymentMethod, Invoice, SystemSettings } from '../types';
 import Card from '../components/ui/Card';
