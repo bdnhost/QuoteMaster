@@ -88,6 +88,7 @@ const LoginPage: React.FC = () => {
               onChange={e => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              autoComplete="email"
             />
             <Input
               label="סיסמה"
@@ -97,6 +98,7 @@ const LoginPage: React.FC = () => {
               onChange={e => setPassword(e.target.value)}
               required
               disabled={isLoading}
+              autoComplete="current-password"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button

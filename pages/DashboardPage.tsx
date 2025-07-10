@@ -53,29 +53,19 @@ const DashboardPage: React.FC = () => {
     };
 
     const calculateTotal = (quote: Quote) => {
-        try {
-            if (!quote.items || !Array.isArray(quote.items)) {
-                return 0;
-            }
-            const subtotal = quote.items.reduce((sum, item) => {
-                const quantity = item.quantity || 0;
-                const unitPrice = item.unitPrice || 0;
-                return sum + (quantity * unitPrice);
-            }, 0);
-            const taxRate = quote.taxRate || 0;
-            return subtotal * (1 + taxRate / 100);
-        } catch (error) {
-            console.error('Error calculating total for quote:', quote.id, error);
-            return 0;
-        }
+        const subtotal = Array.isArray(quote.items)
+            ? quote.items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0)
+            : 0;
+        const taxRate = typeof quote.taxRate === 'number' ? quote.taxRate : 0;
+        return subtotal * (1 + taxRate / 100);
     };
 
     const formatDate = (dateString: string | undefined) => {
-        if (!dateString) return '';
+        if (!dateString) return 'N/A';
         try {
             return new Date(dateString).toLocaleDateString('he-IL');
         } catch (error) {
-            return dateString;
+            return 'Invalid Date';
         }
     };
     
@@ -135,13 +125,13 @@ const DashboardPage: React.FC = () => {
                         </thead>
                         <tbody>
                             {quotes.map(quote => {
-                                const customer = quote.customer || { name: 'לא צוין', email: '', phone: '', address: '' };
                                 const total = calculateTotal(quote);
+                                const customerName = quote.customer?.name || 'לא צוין';
                                 
                                 return (
                                     <tr key={quote.id || Math.random()} className="border-b hover:bg-slate-50">
                                         <td className="p-3 font-mono text-slate-700">{quote.quoteNumber || 'ללא מספר'}</td>
-                                        <td className="p-3 text-slate-800">{customer.name || 'לא צוין'}</td>
+                                        <td className="p-3 text-slate-800">{customerName}</td>
                                         <td className="p-3 text-slate-600">{formatDate(quote.issueDate)}</td>
                                         <td className="p-3 font-medium text-slate-800">₪{total.toFixed(2)}</td>
                                         <td className="p-3">
