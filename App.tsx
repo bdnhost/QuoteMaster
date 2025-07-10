@@ -11,6 +11,7 @@ import QuoteEditorPage from './pages/QuoteEditorPage';
 import ProfilePage from './pages/ProfilePage';
 import PaymentSettingsPage from './pages/PaymentSettingsPage';
 import AuthDebugPage from './pages/AuthDebugPage';
+import QuoteDebugPage from './pages/QuoteDebugPage';
 import { useHashRouter } from './hooks/useHashRouter';
 import LandingPage from './pages/LandingPage';
 
@@ -47,6 +48,8 @@ const App: React.FC = () => {
                     return <PaymentSettingsPage />;
                   case 'debug':
                     return <AuthDebugPage />;
+                  case 'quote-debug':
+                    return <QuoteDebugPage />;
                   case 'dashboard':
                   default:
                     // Show admin dashboard for admin users, regular dashboard for others
