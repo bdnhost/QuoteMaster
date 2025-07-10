@@ -205,8 +205,15 @@ export interface SystemSetting {
     description: string;
     category: string;
     is_public: boolean;
+    created_by?: string;
+    updated_by?: string;
     created_at: string;
     updated_at: string;
+    // For joined views
+    created_by_email?: string;
+    created_by_name?: string;
+    updated_by_email?: string;
+    updated_by_name?: string;
 }
 
 export interface EmailTemplate {
@@ -217,8 +224,15 @@ export interface EmailTemplate {
     text_content?: string;
     variables: string[];
     is_active: boolean;
+    created_by?: string;
+    updated_by?: string;
     created_at: string;
     updated_at: string;
+    // For joined views
+    created_by_email?: string;
+    created_by_name?: string;
+    updated_by_email?: string;
+    updated_by_name?: string;
 }
 
 export interface Notification {
@@ -257,5 +271,12 @@ export interface DailyStat {
     new_invoices: number;
     total_revenue: number;
     new_revenue: number;
+    created_by?: string;
+    updated_by?: string;
     created_at: string;
+    // For joined views
+    created_by_email?: string;
+    created_by_name?: string;
+    updated_by_email?: string;
+    updated_by_name?: string;
 }

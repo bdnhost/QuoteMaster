@@ -266,7 +266,7 @@ export class PermissionManager {
    */
   static async getAccessibleUsers() {
     const isAdmin = await this.isAdmin();
-    
+
     if (!isAdmin) {
       throw new Error('Access denied: Admin permissions required to view users');
     }
@@ -275,6 +275,61 @@ export class PermissionManager {
       .from('users')
       .select('*')
       .order('created_at', { ascending: false });
+  }
+
+  /**
+   * Get accessible system settings based on permissions
+   */
+  static async getAccessibleSystemSettings() {
+    const isAdmin = await this.isAdmin();
+
+    if (isAdmin) {
+      // Admin can see all settings with user info
+      return await supabase
+        .from('system_settings_with_users')
+        .select('*')
+        .order('category', { ascending: true });
+    } else {
+      // Regular users see only public settings
+      return await supabase
+        .from('system_settings')
+        .select('*')
+        .eq('is_public', true)
+        .order('category', { ascending: true });
+    }
+  }
+
+  /**
+   * Get accessible email templates based on permissions
+   */
+  static async getAccessibleEmailTemplates() {
+    const isAdmin = await this.isAdmin();
+
+    if (!isAdmin) {
+      throw new Error('Access denied: Admin permissions required to view email templates');
+    }
+
+    return await supabase
+      .from('email_templates_with_users')
+      .select('*')
+      .order('name', { ascending: true });
+  }
+
+  /**
+   * Get accessible daily stats based on permissions
+   */
+  static async getAccessibleDailyStats() {
+    const isAdmin = await this.isAdmin();
+
+    if (!isAdmin) {
+      throw new Error('Access denied: Admin permissions required to view daily stats');
+    }
+
+    return await supabase
+      .from('daily_stats_with_users')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(30); // Last 30 days
   }
 
   /**
