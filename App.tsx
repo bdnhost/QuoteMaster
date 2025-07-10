@@ -49,6 +49,7 @@ const App: React.FC = () => {
                   case 'debug':
                     return <AuthDebugPage />;
                   case 'quote-debug':
+                  case 'quotedebug':
                     return <QuoteDebugPage />;
                   case 'dashboard':
                   default:

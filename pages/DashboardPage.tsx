@@ -17,15 +17,18 @@ const statusMap: { [key in Quote['status']]: { text: string; color: string } } =
 const DashboardPage: React.FC = () => {
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchQuotes = async () => {
             try {
+                setError(null);
                 const data = await SupabaseQuoteService.getQuotes();
                 setQuotes(data);
             } catch (error) {
                 console.error("Failed to fetch quotes", error);
+                setError(error instanceof Error ? error.message : 'שגיאה בטעינת הצעות המחיר');
             } finally {
                 setIsLoading(false);
             }
@@ -33,10 +36,35 @@ const DashboardPage: React.FC = () => {
         fetchQuotes();
     }, []);
 
+    const refreshQuotes = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const data = await SupabaseQuoteService.getQuotes();
+            setQuotes(data);
+        } catch (error) {
+            console.error("Failed to refresh quotes", error);
+            setError(error instanceof Error ? error.message : 'שגיאה בטעינת הצעות המחיר');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleStatusChange = async (quoteId: string, newStatus: 'draft' | 'sent' | 'approved' | 'rejected') => {
         setUpdatingStatus(quoteId);
         try {
-            const updatedQuote = await api.updateQuoteStatus(quoteId, newStatus);
+            // Find the current quote
+            const currentQuote = quotes.find(q => q.id === quoteId);
+            if (!currentQuote) {
+                throw new Error('Quote not found');
+            }
+
+            // Update the quote with new status
+            const updatedQuote = await SupabaseQuoteService.updateQuote(quoteId, {
+                ...currentQuote,
+                status: newStatus
+            });
+
             setQuotes(prevQuotes =>
                 prevQuotes.map(quote =>
                     quote.id === quoteId ? updatedQuote : quote
