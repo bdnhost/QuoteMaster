@@ -110,26 +110,34 @@ const DashboardPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {quotes.map(quote => (
-                                <tr key={quote.id} className="border-b hover:bg-slate-50">
-                                    <td className="p-3 font-mono text-slate-700">{quote.quoteNumber}</td>
-                                    <td className="p-3 text-slate-800">{quote.customer.name}</td>
-                                    <td className="p-3 text-slate-600">{quote.issueDate}</td>
-                                    <td className="p-3 font-medium text-slate-800">₪{calculateTotal(quote).toFixed(2)}</td>
-                                    <td className="p-3">
-                                        <StatusDropdown
-                                            currentStatus={quote.status}
-                                            onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
-                                            disabled={updatingStatus === quote.id}
-                                        />
-                                    </td>
-                                    <td className="p-3">
-                                        <a href={`#/quotes/${quote.id}`} className="font-medium text-blue-600 hover:text-blue-800">
-                                            עריכה
-                                        </a>
-                                    </td>
-                                </tr>
-                            ))}
+                            {quotes.map(quote => {
+                                // Safe access to quote properties with fallbacks
+                                const customerName = quote.customer?.name || 'לקוח לא מוגדר';
+                                const quoteNumber = quote.quoteNumber || 'לא מוגדר';
+                                const issueDate = quote.issueDate || 'לא מוגדר';
+                                const status = quote.status || 'draft';
+
+                                return (
+                                    <tr key={quote.id} className="border-b hover:bg-slate-50">
+                                        <td className="p-3 font-mono text-slate-700">{quoteNumber}</td>
+                                        <td className="p-3 text-slate-800">{customerName}</td>
+                                        <td className="p-3 text-slate-600">{issueDate}</td>
+                                        <td className="p-3 font-medium text-slate-800">₪{calculateTotal(quote).toFixed(2)}</td>
+                                        <td className="p-3">
+                                            <StatusDropdown
+                                                currentStatus={status}
+                                                onStatusChange={(newStatus) => handleStatusChange(quote.id!, newStatus)}
+                                                disabled={updatingStatus === quote.id}
+                                            />
+                                        </td>
+                                        <td className="p-3">
+                                            <a href={`#/quotes/${quote.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                                                עריכה
+                                            </a>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

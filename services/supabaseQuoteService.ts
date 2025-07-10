@@ -336,14 +336,19 @@ export class SupabaseQuoteService {
    * Transform Supabase quote data to Quote type
    */
   private static transformSupabaseQuote(data: any): Quote {
+    // Ensure data exists and has required properties
+    if (!data) {
+      throw new Error('Quote data is null or undefined');
+    }
+
     return {
-      id: data.id,
-      quoteNumber: data.quote_number,
+      id: data.id || '',
+      quoteNumber: data.quote_number || '',
       businessInfo: {
-        name: '', // Will be filled from user data
-        phone: '',
-        address: '',
-        logoUrl: ''
+        name: data.business_name || '',
+        phone: data.business_phone || '',
+        address: data.business_address || '',
+        logoUrl: data.business_logo || ''
       },
       customer: {
         name: data.client_name || '',
@@ -352,13 +357,13 @@ export class SupabaseQuoteService {
         address: data.client_address || ''
       },
       items: (data.quote_items || []).map((item: any): ServiceItem => ({
-        id: item.id,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: parseFloat(item.unit_price)
+        id: item.id || '',
+        description: item.description || '',
+        quantity: item.quantity || 0,
+        unitPrice: parseFloat(item.unit_price) || 0
       })),
       notes: data.notes || '',
-      issueDate: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : '',
+      issueDate: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       validUntil: data.valid_until || '',
       taxRate: 17,
       status: data.status || 'draft'
