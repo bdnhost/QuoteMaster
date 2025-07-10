@@ -4,21 +4,26 @@
 
 🔄 **עדכון אבטחה**: המאגר נוצר מחדש עם הגנה מלאה על קבצי ENV
 
+🚀 **מעבר ל-Supabase**: המערכת עברה למסד נתונים Supabase מנוהל עם API אוטומטי
+
 ## ✨ תכונות עיקריות
 
 ### 💼 ניהול הצעות מחיר
+
 - יצירת הצעות מחיר מקצועיות
 - יצירת PDF אוטומטית
 - ניהול סטטוסים (טיוטה, נשלח, אושר, נדחה)
 - מעקב אחר לקוחות ופרויקטים
 
 ### 💰 מערכת תשלומים מתקדמת
+
 - ניהול שיטות תשלום מרובות
 - יצירת חשבוניות מהצעות מחיר
 - דוחות כספיים ומעקב הכנסות
 - ניהול תאריכי פירעון
 
 ### 👑 תכונות אדמין מתקדמות
+
 - דשבורד ניהול מקיף
 - ניהול הרשאות משתמשים
 - הגדרות מערכת כלליות
@@ -26,6 +31,7 @@
 - ניהול תבניות הצעות מחיר
 
 ### 🔐 אבטחה מתקדמת
+
 - Rate limiting למניעת התקפות
 - Input validation מקיף
 - הצפנת סיסמאות מתקדמת
@@ -35,30 +41,35 @@
 ## 🛠️ התקנה
 
 ### דרישות מערכת
-- Node.js 16+ 
+
+- Node.js 16+
 - MySQL 8.0+
 - npm או yarn
 
 ### שלבי התקנה
 
 1. **שכפול המאגר**
+
 ```bash
 git clone https://github.com/bdnhost/QuoteMaster.git
 cd QuoteMaster
 ```
 
 2. **התקנת תלויות - Frontend**
+
 ```bash
 npm install
 ```
 
 3. **התקנת תלויות - Backend**
+
 ```bash
 cd backend
 npm install
 ```
 
 4. **הגדרת משתני סביבה**
+
 ```bash
 # העתק את קובץ הדוגמה
 cp backend/.env.example backend/.env
@@ -68,6 +79,7 @@ nano backend/.env
 ```
 
 5. **הגדרת מסד נתונים**
+
 ```bash
 # צור מסד נתונים חדש ב-MySQL
 mysql -u root -p
@@ -76,6 +88,7 @@ exit
 ```
 
 6. **הפעלת השרתים**
+
 ```bash
 # Terminal 1 - Backend
 cd backend
@@ -105,11 +118,13 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 ## 🚀 פריסה לפרודקשן
 
 ### Vercel (Frontend)
+
 1. חבר את המאגר ל-Vercel
 2. הגדר משתני סביבה ב-Vercel Dashboard
 3. פרוס אוטומטית מ-main branch
 
 ### Backend (Railway/Heroku/VPS)
+
 1. הגדר משתני סביבה בפלטפורמה
 2. הגדר מסד נתונים MySQL
 3. הרץ מיגרציות
@@ -122,6 +137,7 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 ## 📱 תמיכה במובייל
 
 המערכת מותאמת לחלוטין למובייל עם:
+
 - עיצוב responsive
 - ניווט מותאם למסכים קטנים
 - טבלאות נגללות
