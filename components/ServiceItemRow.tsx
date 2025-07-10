@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { ServiceItem } from '../types';
 import Input from './ui/Input';
@@ -11,7 +10,9 @@ interface ServiceItemRowProps {
 }
 
 const ServiceItemRow: React.FC<ServiceItemRowProps> = ({ item, onUpdate, onRemove, taxRate }) => {
-  const total = item.quantity * item.unitPrice;
+  const quantity = item.quantity || 0;
+  const unitPrice = item.unitPrice || 0;
+  const total = quantity * unitPrice;
 
   const handleUpdate = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
@@ -25,7 +26,7 @@ const ServiceItemRow: React.FC<ServiceItemRowProps> = ({ item, onUpdate, onRemov
       <td className="p-2 align-top">
         <input
             name="description"
-            value={item.description}
+            value={item.description || ''}
             onChange={handleUpdate}
             placeholder="תיאור השירות"
             className="w-full bg-transparent border-none focus:ring-0 p-1"
@@ -35,18 +36,22 @@ const ServiceItemRow: React.FC<ServiceItemRowProps> = ({ item, onUpdate, onRemov
         <input
             name="quantity"
             type="number"
-            value={item.quantity}
+            value={quantity}
             onChange={handleUpdate}
             className="w-full bg-transparent border-none focus:ring-0 p-1 text-center"
+            min="0"
+            step="1"
         />
       </td>
       <td className="p-2 align-top w-32">
         <input
             name="unitPrice"
             type="number"
-            value={item.unitPrice}
+            value={unitPrice}
             onChange={handleUpdate}
             className="w-full bg-transparent border-none focus:ring-0 p-1 text-center"
+            min="0"
+            step="0.01"
         />
       </td>
       <td className="p-2 align-top w-32 text-center font-medium text-slate-700">
