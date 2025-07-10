@@ -214,7 +214,7 @@ export class PermissionManager {
         .select(`
           *,
           quote_items (*),
-          users (
+          customer:users (
             business_name,
             email
           )
@@ -222,12 +222,20 @@ export class PermissionManager {
         .order('created_at', { ascending: false });
     } else {
       // Regular user sees only their quotes
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { data: [], error: null };
+
       return await supabase
         .from('quotes')
         .select(`
           *,
-          quote_items (*)
+          quote_items (*),
+          customer:users (
+            business_name,
+            email
+          )
         `)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
     }
   }

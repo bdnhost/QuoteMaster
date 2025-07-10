@@ -59,12 +59,12 @@ const App: React.FC = () => {
                   default:
                     // Show admin dashboard for admin users, regular dashboard for others
                     if (!user) {
-                      console.warn('User is null but authenticated - redirecting to login');
-                      window.location.hash = '#/login';
-                      return <div className="flex justify-center items-center h-screen">
-                        <div className="text-center">
-                          <p className="text-gray-600">מפנה לדף התחברות...</p>
-                        </div>
+                      // This can happen briefly while the user object is being populated
+                      return <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+                          <div className="text-center">
+                              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                              <p className="text-gray-600 text-lg">טוען נתוני משתמש...</p>
+                          </div>
                       </div>;
                     }
                     return user.role === 'admin' ? <AdminDashboardPage /> : <DashboardPage />;

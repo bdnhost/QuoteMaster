@@ -22,6 +22,8 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
   const { user } = useAuth();
 
   useEffect(() => {
+    let isCancelled = false;
+
     const loadQuote = async () => {
       setIsLoading(true);
       setError(null);
@@ -35,17 +37,27 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
         } else {
           throw new Error("No quote ID provided.");
         }
-        setQuote(quoteData);
+        if (!isCancelled) {
+          setQuote(quoteData);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load quote data.");
+        if (!isCancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load quote data.");
+        }
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     if (user) {
         loadQuote();
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [quoteId, user]);
 
   const handleQuoteChange = useCallback((newQuote: Quote) => {

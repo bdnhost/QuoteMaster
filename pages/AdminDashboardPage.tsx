@@ -103,8 +103,8 @@ const AdminDashboardPage: React.FC = () => {
     };
 
     const calculateTotal = (quote: Quote) => {
-        const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-        return subtotal * (1 + quote.taxRate / 100);
+        const subtotal = (quote.items || []).reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+        return subtotal * (1 + (quote.taxRate || 0) / 100);
     };
 
     const formatCurrency = (amount: number) => {
@@ -250,7 +250,7 @@ const AdminDashboardPage: React.FC = () => {
                                     {quotes.map((quote) => (
                                         <tr key={quote.id} className="border-b border-slate-100 hover:bg-slate-50">
                                             <td className="p-3 font-medium text-slate-900">{quote.quoteNumber}</td>
-                                            <td className="p-3">{quote.customer.name}</td>
+                                            <td className="p-3">{quote.customer?.name || 'N/A'}</td>
                                             <td className="p-3">{formatDate(quote.issueDate)}</td>
                                             <td className="p-3">{formatDate(quote.validUntil)}</td>
                                             <td className="p-3 font-medium">{formatCurrency(calculateTotal(quote))}</td>
