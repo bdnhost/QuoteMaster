@@ -4,6 +4,7 @@ import type { Quote } from '../types';
 import * as api from '../services/apiService';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import StatusDropdown from '../components/ui/StatusDropdown';
 
 const statusMap: { [key in Quote['status']]: { text: string; color: string } } = {
     draft: { text: 'טיוטה', color: 'bg-slate-200 text-slate-800' },
@@ -15,6 +16,7 @@ const statusMap: { [key in Quote['status']]: { text: string; color: string } } =
 const DashboardPage: React.FC = () => {
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchQuotes = async () => {
@@ -29,6 +31,23 @@ const DashboardPage: React.FC = () => {
         };
         fetchQuotes();
     }, []);
+
+    const handleStatusChange = async (quoteId: string, newStatus: 'draft' | 'sent' | 'approved' | 'rejected') => {
+        setUpdatingStatus(quoteId);
+        try {
+            const updatedQuote = await api.updateQuoteStatus(quoteId, newStatus);
+            setQuotes(prevQuotes =>
+                prevQuotes.map(quote =>
+                    quote.id === quoteId ? updatedQuote : quote
+                )
+            );
+        } catch (error) {
+            console.error('Failed to update quote status:', error);
+            alert('שגיאה בעדכון סטטוס ההצעה. אנא נסה שוב.');
+        } finally {
+            setUpdatingStatus(null);
+        }
+    };
 
     const calculateTotal = (quote: Quote) => {
         const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -69,9 +88,11 @@ const DashboardPage: React.FC = () => {
                                     <td className="p-3 text-slate-600">{quote.issueDate}</td>
                                     <td className="p-3 font-medium text-slate-800">₪{calculateTotal(quote).toFixed(2)}</td>
                                     <td className="p-3">
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusMap[quote.status].color}`}>
-                                            {statusMap[quote.status].text}
-                                        </span>
+                                        <StatusDropdown
+                                            currentStatus={quote.status}
+                                            onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
+                                            disabled={updatingStatus === quote.id}
+                                        />
                                     </td>
                                     <td className="p-3">
                                         <a href={`#/quotes/${quote.id}`} className="font-medium text-blue-600 hover:text-blue-800">

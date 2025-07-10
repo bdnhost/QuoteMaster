@@ -22,8 +22,18 @@ const RegisterPage: React.FC = () => {
       await register(email, password, businessName, businessPhone, businessAddress);
       window.location.hash = '#/dashboard';
     } catch (err) {
-      setError('שגיאה בהרשמה. נסה שוב.');
-      console.error(err);
+      console.error('Registration error:', err);
+      if (err instanceof Error) {
+        if (err.message.includes('User already exists')) {
+          setError('משתמש עם כתובת אימייל זו כבר קיים במערכת.');
+        } else if (err.message.includes('Network')) {
+          setError('שגיאת רשת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
+        } else {
+          setError('שגיאה בהרשמה. אנא נסה שוב מאוחר יותר.');
+        }
+      } else {
+        setError('שגיאה בהרשמה. נסה שוב.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -33,6 +43,16 @@ const RegisterPage: React.FC = () => {
     <div className="flex justify-center items-center pt-16">
       <div className="w-full max-w-md">
         <Card title="הרשמה למערכת">
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+            <p className="text-sm">
+              <strong>הערה:</strong> המשתמש הראשון שיירשם למערכת יקבל הרשאות אדמין.
+            </p>
+          </div>
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
               label="כתובת אימייל"
@@ -79,7 +99,7 @@ const RegisterPage: React.FC = () => {
               required
               disabled={isLoading}
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'מבצע הרשמה...' : 'הרשמה'}
             </Button>

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import * as api from '../services/apiService';
 import type { BusinessInfo } from '../types';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -23,13 +24,20 @@ const ProfilePage: React.FC = () => {
         setFormData(prev => prev ? { ...prev, [field]: value } : null);
     };
 
-    const handleLogoChange = (file: File | null) => {
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                handleChange('logoUrl', reader.result as string);
-            };
-            reader.readAsDataURL(file);
+    const handleLogoChange = async (file: File | null) => {
+        if (file && user) {
+            try {
+                setIsSaving(true);
+                setFeedback(null);
+                const logoUrl = await api.uploadLogo(user.id, file);
+                handleChange('logoUrl', `${api.API_BASE_URL}${logoUrl}`);
+                setFeedback({ type: 'success', message: 'הלוגו הועלה בהצלחה!' });
+            } catch (error) {
+                console.error('Logo upload error:', error);
+                setFeedback({ type: 'error', message: 'שגיאה בהעלאת הלוגו. נסה שוב.' });
+            } finally {
+                setIsSaving(false);
+            }
         } else {
             handleChange('logoUrl', null);
         }

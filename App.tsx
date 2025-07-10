@@ -2,11 +2,14 @@
 import React from 'react';
 import Header from './components/Header';
 import { useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import QuoteEditorPage from './pages/QuoteEditorPage';
 import ProfilePage from './pages/ProfilePage';
+import PaymentSettingsPage from './pages/PaymentSettingsPage';
 import { useHashRouter } from './hooks/useHashRouter';
 import LandingPage from './pages/LandingPage';
 
@@ -39,9 +42,12 @@ const App: React.FC = () => {
                     return <QuoteEditorPage quoteId={params[0]} />;
                   case 'profile':
                     return <ProfilePage />;
+                  case 'payments':
+                    return <PaymentSettingsPage />;
                   case 'dashboard':
                   default:
-                    return <DashboardPage />;
+                    // Show admin dashboard for admin users, regular dashboard for others
+                    return user?.role === 'admin' ? <AdminDashboardPage /> : <DashboardPage />;
                 }
               })()
             }
