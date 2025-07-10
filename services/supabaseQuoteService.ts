@@ -75,28 +75,53 @@ export class SupabaseQuoteService {
 
       if (userError) throw userError;
 
-      // Generate quote number
-      const quoteNumber = await this.generateQuoteNumber();
+      // Generate quote number with retry mechanism
+      let quoteNumber: string;
+      let quoteData: any;
+      let attempts = 0;
+      const maxAttempts = 3;
 
-      // Create quote
-      const { data: quoteData, error: quoteError } = await supabase
-        .from('quotes')
-        .insert({
-          user_id: user.id,
-          quote_number: quoteNumber,
-          client_name: quote.customer?.name || '',
-          client_email: quote.customer?.email || '',
-          client_phone: quote.customer?.phone || '',
-          client_address: quote.customer?.address || '',
-          notes: quote.notes || '',
-          valid_until: quote.validUntil || null,
-          status: 'draft',
-          total_amount: 0
-        })
-        .select()
-        .single();
+      while (attempts < maxAttempts) {
+        try {
+          quoteNumber = await this.generateQuoteNumber();
 
-      if (quoteError) throw quoteError;
+          // Try to create quote
+          const { data, error } = await supabase
+            .from('quotes')
+            .insert({
+              user_id: user.id,
+              quote_number: quoteNumber,
+              client_name: quote.customer?.name || '',
+              client_email: quote.customer?.email || '',
+              client_phone: quote.customer?.phone || '',
+              client_address: quote.customer?.address || '',
+              notes: quote.notes || '',
+              valid_until: quote.validUntil || null,
+              status: 'draft',
+              total_amount: 0
+            })
+            .select()
+            .single();
+
+          if (error) {
+            if (error.code === '23505' && attempts < maxAttempts - 1) {
+              // Duplicate key error, try again with new number
+              attempts++;
+              console.warn(`Quote number ${quoteNumber} already exists, retrying... (attempt ${attempts})`);
+              continue;
+            }
+            throw error;
+          }
+
+          quoteData = data;
+          break;
+        } catch (error) {
+          attempts++;
+          if (attempts >= maxAttempts) {
+            throw new Error(`Failed to create quote after ${maxAttempts} attempts: ${error}`);
+          }
+        }
+      }
 
       // Add items if provided
       if (quote.items && quote.items.length > 0) {
@@ -261,12 +286,18 @@ export class SupabaseQuoteService {
    * Generate a unique quote number
    */
   private static async generateQuoteNumber(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const year = new Date().getFullYear();
-    
+    const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
+
+    // Try to get the highest number for this user in this year
     const { data, error } = await supabase
       .from('quotes')
       .select('quote_number')
-      .like('quote_number', `${year}-%`)
+      .eq('user_id', user.id)
+      .like('quote_number', `${year}${month}-%`)
       .order('quote_number', { ascending: false })
       .limit(1);
 
@@ -274,11 +305,31 @@ export class SupabaseQuoteService {
 
     let nextNum = 1;
     if (data && data.length > 0) {
-      const lastNum = parseInt(data[0].quote_number.split('-')[1], 10);
-      if (!isNaN(lastNum)) nextNum = lastNum + 1;
+      const lastQuoteNumber = data[0].quote_number;
+      const parts = lastQuoteNumber.split('-');
+      if (parts.length >= 2) {
+        const lastNum = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastNum)) nextNum = lastNum + 1;
+      }
     }
 
-    return `${year}-${nextNum.toString().padStart(3, '0')}`;
+    // Format: YYYYMM-XXX (e.g., 202412-001)
+    const baseNumber = `${year}${month}-${nextNum.toString().padStart(3, '0')}`;
+
+    // Double-check uniqueness by trying to find existing quote with this number
+    const { data: existingQuote } = await supabase
+      .from('quotes')
+      .select('id')
+      .eq('quote_number', baseNumber)
+      .limit(1);
+
+    if (existingQuote && existingQuote.length > 0) {
+      // If still exists, add timestamp to make it unique
+      const timestamp = Date.now().toString().slice(-4);
+      return `${year}${month}-${nextNum.toString().padStart(3, '0')}-${timestamp}`;
+    }
+
+    return baseNumber;
   }
 
   /**
