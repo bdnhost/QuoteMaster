@@ -15,7 +15,7 @@
 #### 🔑 Gemini AI API Key
 ```
 Name: VITE_GEMINI_API_KEY
-Value: AIzaSyBfs0V4mPiOHadz-vscHdIFR8rTFgNgF8g
+Value: AIzaXXXXXXXXXXXX
 Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
