@@ -38,18 +38,23 @@ export const SupabaseAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Get user profile from our users table
   const getUserProfile = async (userId: string): Promise<SupabaseUser | null> => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.error('Error fetching user profile:', error);
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProfile:', error);
       return null;
     }
-
-    return data;
   };
 
   // Create user profile in our users table
@@ -85,42 +90,99 @@ export const SupabaseAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        getUserProfile(session.user.id).then((profile) => {
-          if (profile) {
-            setUser(convertSupabaseUser(session.user, profile));
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        console.log('Initializing auth...');
+
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('Error getting session:', error);
+          if (mounted) {
+            setIsLoading(false);
           }
-        });
+          return;
+        }
+
+        console.log('Session:', session?.user?.email || 'No session');
+
+        if (mounted) {
+          setSession(session);
+
+          if (session?.user) {
+            try {
+              const profile = await getUserProfile(session.user.id);
+              if (profile && mounted) {
+                setUser(convertSupabaseUser(session.user, profile));
+                console.log('User profile loaded:', profile.email);
+              }
+            } catch (profileError) {
+              console.error('Error getting user profile:', profileError);
+            }
+          }
+
+          setIsLoading(false);
+          console.log('Auth initialization complete');
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
-    });
+    };
+
+    // Add timeout as fallback
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.warn('Auth initialization timeout - forcing loading to false');
+        setIsLoading(false);
+      }
+    }, 5000); // 5 second timeout
+
+    // Initialize auth
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+
+      if (!mounted) return;
+
       setSession(session);
-      
+
       if (session?.user) {
-        let profile = await getUserProfile(session.user.id);
-        
-        // If profile doesn't exist, create it
-        if (!profile) {
-          profile = await createUserProfile(session.user.id, session.user.email || '');
-        }
-        
-        if (profile) {
-          setUser(convertSupabaseUser(session.user, profile));
+        try {
+          let profile = await getUserProfile(session.user.id);
+
+          // If profile doesn't exist, create it
+          if (!profile) {
+            profile = await createUserProfile(session.user.id, session.user.email || '');
+          }
+
+          if (profile && mounted) {
+            setUser(convertSupabaseUser(session.user, profile));
+          }
+        } catch (error) {
+          console.error('Error handling auth change:', error);
         }
       } else {
         setUser(null);
       }
-      
-      setIsLoading(false);
+
+      if (mounted) {
+        setIsLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<AuthUser | null> => {
