@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Quote } from '../types';
 
@@ -7,38 +6,43 @@ interface QuotePreviewProps {
 }
 
 const QuotePreview: React.FC<QuotePreviewProps> = ({ quote }) => {
-  const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const taxAmount = subtotal * (quote.taxRate / 100);
+  const subtotal = quote.items?.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) || 0;
+  const taxAmount = subtotal * ((quote.taxRate || 0) / 100);
   const total = subtotal + taxAmount;
+
+  // בטיחות נגד undefined/null
+  const customer = quote.customer || { name: '', email: '', phone: '', address: '' };
+  const businessInfo = quote.businessInfo || { name: '', phone: '', address: '', logoUrl: null };
+  const items = quote.items || [];
 
   return (
     <div id="quote-preview" className="bg-white rounded-lg shadow-lg border border-slate-200 p-8 md:p-12 h-full text-sm">
       <div className="flex justify-between items-start pb-8 border-b-2 border-slate-200">
         <div className="flex-1">
-          {quote.businessInfo.logoUrl ? (
-            <img src={quote.businessInfo.logoUrl} alt="לוגו" className="max-h-24 mb-4" />
+          {businessInfo.logoUrl ? (
+            <img src={businessInfo.logoUrl} alt="לוגו" className="max-h-24 mb-4" />
           ) : (
-             <h1 className="text-3xl font-bold text-slate-800">{quote.businessInfo.name || "שם העסק"}</h1>
+             <h1 className="text-3xl font-bold text-slate-800">{businessInfo.name || "שם העסק"}</h1>
           )}
-          <p className="text-slate-600">{quote.businessInfo.name}</p>
-          <p className="text-slate-600">{quote.businessInfo.address}</p>
-          <p className="text-slate-600">טלפון: {quote.businessInfo.phone}</p>
+          <p className="text-slate-600">{businessInfo.name || "שם העסק"}</p>
+          <p className="text-slate-600">{businessInfo.address || "כתובת העסק"}</p>
+          <p className="text-slate-600">טלפון: {businessInfo.phone || "טלפון"}</p>
         </div>
         <div className="text-left">
           <h2 className="text-3xl font-bold text-slate-400 uppercase tracking-wider">הצעת מחיר</h2>
-          <p className="text-slate-600 mt-2">מספר: <span className="font-mono">{quote.quoteNumber}</span></p>
-          <p className="text-slate-600">תאריך: <span className="font-mono">{quote.issueDate}</span></p>
-          <p className="text-slate-600">בתוקף עד: <span className="font-mono">{quote.validUntil}</span></p>
+          <p className="text-slate-600 mt-2">מספר: <span className="font-mono">{quote.quoteNumber || ''}</span></p>
+          <p className="text-slate-600">תאריך: <span className="font-mono">{quote.issueDate || ''}</span></p>
+          <p className="text-slate-600">בתוקף עד: <span className="font-mono">{quote.validUntil || ''}</span></p>
         </div>
       </div>
       
       <div className="grid grid-cols-2 gap-8 my-8">
         <div>
           <h4 className="font-semibold text-slate-500 mb-2">הצעה עבור:</h4>
-          <p className="font-bold text-slate-800">{quote.customer.name || "שם הלקוח"}</p>
-          <p className="text-slate-600">{quote.customer.address}</p>
-          <p className="text-slate-600">{quote.customer.email}</p>
-          <p className="text-slate-600">{quote.customer.phone}</p>
+          <p className="font-bold text-slate-800">{customer.name || "שם הלקוח"}</p>
+          <p className="text-slate-600">{customer.address || "כתובת הלקוח"}</p>
+          <p className="text-slate-600">{customer.email || "אימייל"}</p>
+          <p className="text-slate-600">{customer.phone || "טלפון"}</p>
         </div>
       </div>
 
@@ -52,12 +56,12 @@ const QuotePreview: React.FC<QuotePreviewProps> = ({ quote }) => {
           </tr>
         </thead>
         <tbody>
-          {quote.items.map(item => (
-            <tr key={item.id} className="border-b border-slate-100">
-              <td className="py-3 px-3 text-slate-800">{item.description}</td>
-              <td className="py-3 px-3 text-slate-600 text-center">{item.quantity}</td>
-              <td className="py-3 px-3 text-slate-600 text-center">₪{item.unitPrice.toFixed(2)}</td>
-              <td className="py-3 px-3 text-slate-800 text-left font-medium">₪{(item.quantity * item.unitPrice).toFixed(2)}</td>
+          {items.map((item, index) => (
+            <tr key={item.id || index} className="border-b border-slate-100">
+              <td className="py-3 px-3 text-slate-800">{item.description || ''}</td>
+              <td className="py-3 px-3 text-slate-600 text-center">{item.quantity || 0}</td>
+              <td className="py-3 px-3 text-slate-600 text-center">₪{(item.unitPrice || 0).toFixed(2)}</td>
+              <td className="py-3 px-3 text-slate-800 text-left font-medium">₪{((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
@@ -70,7 +74,7 @@ const QuotePreview: React.FC<QuotePreviewProps> = ({ quote }) => {
             <span className="text-slate-800 font-medium">₪{subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between py-2">
-            <span className="text-slate-600">מע"מ ({quote.taxRate}%):</span>
+            <span className="text-slate-600">מע"מ ({quote.taxRate || 0}%):</span>
             <span className="text-slate-800 font-medium">₪{taxAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between py-2 text-lg font-bold border-t-2 border-slate-300 mt-2">
