@@ -26,8 +26,12 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-        <div className="flex justify-center items-center h-screen">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 text-lg">טוען את המערכת...</p>
+                <p className="text-sm text-gray-500 mt-2">אם הטעינה נמשכת יותר מדי, רענן את הדף</p>
+            </div>
         </div>
     );
   }
@@ -54,7 +58,16 @@ const App: React.FC = () => {
                   case 'dashboard':
                   default:
                     // Show admin dashboard for admin users, regular dashboard for others
-                    return user?.role === 'admin' ? <AdminDashboardPage /> : <DashboardPage />;
+                    if (!user) {
+                      console.warn('User is null but authenticated - redirecting to login');
+                      window.location.hash = '#/login';
+                      return <div className="flex justify-center items-center h-screen">
+                        <div className="text-center">
+                          <p className="text-gray-600">מפנה לדף התחברות...</p>
+                        </div>
+                      </div>;
+                    }
+                    return user.role === 'admin' ? <AdminDashboardPage /> : <DashboardPage />;
                 }
               })()
             }
@@ -69,6 +82,11 @@ const App: React.FC = () => {
         return <LoginPage />;
     case 'register':
         return <RegisterPage />;
+    case 'debug':
+        return <AuthDebugPage />;
+    case 'quote-debug':
+    case 'quotedebug':
+        return <QuoteDebugPage />;
     case 'landing':
     default:
         return <LandingPage />;

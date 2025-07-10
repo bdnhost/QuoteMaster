@@ -118,10 +118,19 @@ export const SupabaseAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
               if (profile && mounted) {
                 setUser(convertSupabaseUser(session.user, profile));
                 console.log('User profile loaded:', profile.email);
+              } else if (mounted) {
+                console.warn('No user profile found, creating one...');
+                const newProfile = await createUserProfile(session.user.id, session.user.email || '');
+                if (newProfile && mounted) {
+                  setUser(convertSupabaseUser(session.user, newProfile));
+                  console.log('New user profile created:', newProfile.email);
+                }
               }
             } catch (profileError) {
               console.error('Error getting user profile:', profileError);
             }
+          } else {
+            setUser(null);
           }
 
           setIsLoading(false);
@@ -135,13 +144,15 @@ export const SupabaseAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
       }
     };
 
-    // Add timeout as fallback
+    // Add timeout as fallback - increased to 10 seconds
     const timeoutId = setTimeout(() => {
       if (mounted) {
         console.warn('Auth initialization timeout - forcing loading to false');
         setIsLoading(false);
+        setSession(null);
+        setUser(null);
       }
-    }, 5000); // 5 second timeout
+    }, 10000); // 10 second timeout
 
     // Initialize auth
     initializeAuth();
