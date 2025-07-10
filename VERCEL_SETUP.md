@@ -21,21 +21,20 @@ Value: AIzaXXXXXXXXXXXX
 Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
-#### 🌐 Backend API URL (Production) - זמני
+#### 🗄️ Supabase URL
 
 ```
-Name: VITE_API_URL
-Value: https://jsonplaceholder.typicode.com
-Environments: ✅ Production ✅ Preview
-Note: זה זמני עד שתפרוס את ה-Backend
+Name: VITE_SUPABASE_URL
+Value: https://ejlvzkwoawxdkwfupmxx.supabase.co
+Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
-#### 🛠️ Backend API URL (Development)
+#### 🔑 Supabase Anon Key
 
 ```
-Name: VITE_API_URL
-Value: http://localhost:3001
-Environments: ✅ Development
+Name: VITE_SUPABASE_ANON_KEY
+Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqbHZ6a3dvYXd4ZGt3ZnVwbXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxMjc4ODUsImV4cCI6MjA2NzcwMzg4NX0.CdzMhNYVfGrKoTFOgz7JOKnMlSOtynXL2yEB9lDP78M
+Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
 #### 📱 App Environment
