@@ -1,8 +1,23 @@
-
 import type { Quote, User, BusinessInfo, PaymentMethod, Invoice, SystemSettings, ActivityLog } from '../types';
 
 // --- API Service Functions ---
 export const API_BASE_URL = 'http://localhost:3001';
+
+// פונקציה עזר ליצירת quote בטוח
+const createSafeQuote = (data: any): Quote => {
+  return {
+    id: data.id || '',
+    quoteNumber: data.quoteNumber || '',
+    businessInfo: data.businessInfo || { name: '', phone: '', address: '', logoUrl: null },
+    customer: data.customer || { name: '', email: '', phone: '', address: '' },
+    items: Array.isArray(data.items) ? data.items : [],
+    notes: data.notes || '',
+    issueDate: data.issueDate || '',
+    validUntil: data.validUntil || '',
+    taxRate: typeof data.taxRate === 'number' ? data.taxRate : 17,
+    status: data.status || 'draft'
+  };
+};
 
 export const register = async (email: string, password: string, businessName: string, businessPhone: string, businessAddress: string): Promise<User> => {
     try {
@@ -15,13 +30,18 @@ export const register = async (email: string, password: string, businessName: st
         });
 
         if (!response.ok) {
+            const errorData = await response.text();
+            console.error('Registration error:', errorData);
             throw new Error('Registration failed');
         }
 
         const data = await response.json();
-        localStorage.setItem('token', data.token);
+        if (data.token) {
+            localStorage.setItem('token', data.token);
+        }
         return data.user;
     } catch (error) {
+        console.error('Registration error:', error);
         throw new Error('Registration failed');
     }
 };
@@ -47,7 +67,9 @@ export const login = async (email: string, pass: string): Promise<User> => {
 
         const data = await response.json();
         console.log('Login successful:', data);
-        localStorage.setItem('token', data.token);
+        if (data.token) {
+            localStorage.setItem('token', data.token);
+        }
         return data.user;
     } catch (error) {
         console.error('Login error:', error);
@@ -63,9 +85,10 @@ export const logout = async (): Promise<void> => {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         });
-        localStorage.removeItem('token');
     } catch (error) {
         console.error('Logout failed:', error);
+    } finally {
+        localStorage.removeItem('token');
     }
 };
 
@@ -132,7 +155,8 @@ export const getQuotes = async (): Promise<Quote[]> => {
         console.log('Raw quotes response:', data);
 
         // The API returns { quotes: Quote[], total: number }
-        return data.quotes || [];
+        const quotes = data.quotes || [];
+        return quotes.map((quote: any) => createSafeQuote(quote));
     } catch (error) {
         console.error('Error fetching quotes:', error);
         throw error;
@@ -154,7 +178,8 @@ export const getQuote = async (id: string): Promise<Quote> => {
             throw new Error('Quote not found');
         }
 
-        return await response.json();
+        const data = await response.json();
+        return createSafeQuote(data);
     } catch (error) {
         console.error('Error fetching quote:', error);
         throw error;
@@ -184,13 +209,13 @@ export const saveQuote = async (quoteToSave: Quote): Promise<Quote> => {
             throw new Error('Failed to save quote');
         }
 
-        return await response.json();
+        const data = await response.json();
+        return createSafeQuote(data);
     } catch (error) {
         console.error('Error saving quote:', error);
         throw error;
     }
 };
-
 
 export const getNewQuote = async (businessInfo: BusinessInfo): Promise<Quote> => {
     try {
@@ -210,7 +235,8 @@ export const getNewQuote = async (businessInfo: BusinessInfo): Promise<Quote> =>
             throw new Error('Failed to create new quote');
         }
 
-        return await response.json();
+        const data = await response.json();
+        return createSafeQuote(data);
     } catch (error) {
         console.error('Error creating new quote:', error);
         throw error;
@@ -300,7 +326,8 @@ export const updateQuoteStatus = async (quoteId: string, status: 'draft' | 'sent
             throw new Error('Failed to update quote status');
         }
 
-        return await response.json();
+        const data = await response.json();
+        return createSafeQuote(data);
     } catch (error) {
         console.error('Error updating quote status:', error);
         throw error;
