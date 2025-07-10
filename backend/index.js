@@ -6,6 +6,8 @@ const db = require('./config/database');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const quoteRoutes = require('./routes/quotes');
+const paymentRoutes = require('./routes/payments');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 
@@ -14,10 +16,15 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve static files (uploads)
+app.use('/uploads', express.static('uploads'));
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/quotes', quoteRoutes);
+app.use('/payments', paymentRoutes);
+app.use('/settings', settingsRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {

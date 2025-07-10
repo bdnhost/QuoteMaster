@@ -27,6 +27,6 @@ module.exports = {
   },
   execute: async (sql, params) => {
     const [result] = await pool.execute(sql, params);
-    return result;
+    return [result];
   }
 };

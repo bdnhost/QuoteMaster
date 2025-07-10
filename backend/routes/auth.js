@@ -11,10 +11,17 @@ router.post('/register', async (req, res) => {
 
   try {
     // Check if user already exists
-    const [existingUsers] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (existingUsers.length > 0) {
+    const existingUsers = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (existingUsers && existingUsers.length > 0) {
       return res.status(400).json({ error: 'User already exists' });
     }
+
+    // Check if this is the first user (admin)
+    const userCount = await db.query('SELECT COUNT(*) as count FROM users');
+    const isFirstUser = userCount[0].count === 0;
+    const role = isFirstUser ? 'admin' : 'user';
+
+    console.log(`Creating ${isFirstUser ? 'ADMIN' : 'regular'} user:`, email);
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
@@ -22,8 +29,8 @@ router.post('/register', async (req, res) => {
 
     // Create user
     const [result] = await db.execute(
-      'INSERT INTO users (email, password, business_name, business_phone, business_address) VALUES (?, ?, ?, ?, ?)',
-      [email, hashedPassword, businessName, businessPhone, businessAddress]
+      'INSERT INTO users (email, password, role, business_name, business_phone, business_address) VALUES (?, ?, ?, ?, ?, ?)',
+      [email, hashedPassword, role, businessName, businessPhone, businessAddress]
     );
 
     const userId = result.insertId;
@@ -32,7 +39,8 @@ router.post('/register', async (req, res) => {
     const payload = {
       user: {
         id: userId,
-        email: email
+        email: email,
+        role: role
       }
     };
 
@@ -43,11 +51,12 @@ router.post('/register', async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN },
       (err, token) => {
         if (err) throw err;
-        res.status(201).json({ 
-          token, 
+        res.status(201).json({
+          token,
           user: {
             id: userId,
             email: email,
+            role: role,
             businessInfo: {
               name: businessName,
               phone: businessPhone,
@@ -72,10 +81,10 @@ router.post('/login', async (req, res) => {
     console.log('Login attempt for email:', email);
 
     // Check if user exists
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     console.log('Query result:', users);
 
-    if (users.length === 0) {
+    if (!users || users.length === 0) {
       console.log('User not found');
       return res.status(400).json({ error: 'Invalid credentials' });
     }
@@ -98,7 +107,8 @@ router.post('/login', async (req, res) => {
     const payload = {
       user: {
         id: user.id,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     };
 
@@ -112,6 +122,7 @@ router.post('/login', async (req, res) => {
         res.json({ token, user: {
           id: user.id,
           email: user.email,
+          role: user.role,
           businessInfo: {
             name: user.business_name,
             phone: user.business_phone,
@@ -138,8 +149,8 @@ router.post('/logout', (req, res) => {
 // @desc    Get current user
 router.get('/me', async (req, res) => {
   try {
-    const [users] = await db.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
-    if (users.length === 0) {
+    const users = await db.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    if (!users || users.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     const user = users[0];
