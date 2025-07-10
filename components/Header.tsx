@@ -28,6 +28,9 @@ const Header: React.FC = () => {
                  <a href="#/dashboard" className="text-sm font-medium text-slate-600 hover:text-blue-600">
                     לוח בקרה
                 </a>
+                 <a href="#/payments" className="text-sm font-medium text-slate-600 hover:text-blue-600">
+                    תשלומים
+                </a>
                  <a href="#/profile" className="text-sm font-medium text-slate-600 hover:text-blue-600">
                     הפרופיל שלי
                 </a>

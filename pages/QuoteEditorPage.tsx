@@ -5,6 +5,7 @@ import * as api from '../services/apiService';
 import QuoteForm from '../components/QuoteForm';
 import QuotePreview from '../components/QuotePreview';
 import Button from '../components/ui/Button';
+import StatusDropdown from '../components/ui/StatusDropdown';
 import { useAuth } from '../contexts/AuthContext';
 
 interface QuoteEditorPageProps {
@@ -16,6 +17,7 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -67,7 +69,46 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
 
   const handlePrint = () => {
       window.print();
-  }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!quote?.id) {
+      setError('יש לשמור את ההצעה לפני הורדת PDF');
+      return;
+    }
+
+    try {
+      await api.downloadQuotePDF(quote.id);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Not authenticated')) {
+          setError('נדרשת התחברות מחדש. אנא התחבר שוב.');
+        } else if (error.message.includes('Quote not found')) {
+          setError('הצעת המחיר לא נמצאה.');
+        } else {
+          setError('שגיאה בהורדת PDF. אנא נסה שוב.');
+        }
+      } else {
+        setError('שגיאה בהורדת PDF. אנא נסה שוב.');
+      }
+    }
+  };
+
+  const handleStatusChange = async (newStatus: 'draft' | 'sent' | 'approved' | 'rejected') => {
+    if (!quote?.id) return;
+
+    setUpdatingStatus(true);
+    try {
+      const updatedQuote = await api.updateQuoteStatus(quote.id, newStatus);
+      setQuote(updatedQuote);
+    } catch (error) {
+      console.error('Status update error:', error);
+      setError('שגיאה בעדכון סטטוס ההצעה. אנא נסה שוב.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   if (isLoading) return <div className="text-center p-8">טוען נתונים...</div>;
   if (error) return <div className="text-center p-8 text-red-600">{error}</div>;
@@ -79,8 +120,21 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
         <h2 className="text-2xl font-bold text-slate-800">
             {quoteId === 'new' ? 'יצירת הצעת מחיר חדשה' : `עריכת הצעה #${quote.quoteNumber}`}
         </h2>
-        <div className="flex gap-2">
-            <Button onClick={handlePrint} variant="secondary">הדפס / PDF</Button>
+        <div className="flex gap-2 items-center">
+            {quote?.id && (
+                <div className="flex items-center gap-2 ml-4">
+                    <span className="text-sm text-slate-600">סטטוס:</span>
+                    <StatusDropdown
+                        currentStatus={quote.status}
+                        onStatusChange={handleStatusChange}
+                        disabled={updatingStatus}
+                    />
+                </div>
+            )}
+            <Button onClick={handlePrint} variant="secondary">הדפס</Button>
+            <Button onClick={handleDownloadPDF} variant="secondary" disabled={!quote?.id}>
+                הורד PDF
+            </Button>
             <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? 'שומר...' : 'שמור שינויים'}
             </Button>

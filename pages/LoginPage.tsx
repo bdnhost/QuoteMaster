@@ -42,8 +42,18 @@ const LoginPage: React.FC = () => {
       navigate('dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      setError('פרטי התחברות שגויים. נסה שוב.');
-      console.log('Error set:', 'פרטי התחברות שגויים. נסה שוב.');
+      if (err instanceof Error) {
+        if (err.message.includes('Invalid credentials')) {
+          setError('אימייל או סיסמה שגויים. אנא נסה שוב.');
+        } else if (err.message.includes('Network')) {
+          setError('שגיאת רשת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
+        } else {
+          setError('שגיאה בהתחברות. אנא נסה שוב מאוחר יותר.');
+        }
+      } else {
+        setError('פרטי התחברות שגויים. נסה שוב.');
+      }
+      console.log('Error set:', error);
     } finally {
       setIsLoading(false);
       console.log('isLoading set to false');

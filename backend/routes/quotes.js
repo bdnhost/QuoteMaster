@@ -7,22 +7,25 @@ const router = express.Router();
 // @desc    Get all quotes for current user
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     const quotes = await db.query(
-      `SELECT q.*, 
-       JSON_OBJECT(
-         'name', q.customer_name,
-         'email', q.customer_email,
-         'phone', q.customer_phone,
-         'address', q.customer_address
-       ) as customer,
-       (SELECT JSON_ARRAYAGG(
+      `SELECT q.*,
+       COALESCE(JSON_OBJECT(
+         'name', COALESCE(q.customer_name, ''),
+         'email', COALESCE(q.customer_email, ''),
+         'phone', COALESCE(q.customer_phone, ''),
+         'address', COALESCE(q.customer_address, '')
+       ), '{}') as customer,
+       COALESCE((SELECT JSON_ARRAYAGG(
          JSON_OBJECT(
            'id', i.id,
-           'description', i.description,
-           'quantity', i.quantity,
-           'unitPrice', i.unit_price
+           'description', COALESCE(i.description, ''),
+           'quantity', COALESCE(i.quantity, 0),
+           'unitPrice', COALESCE(i.unit_price, 0)
          )
-       ) FROM service_items i WHERE i.quote_id = q.id) as items
+       ) FROM service_items i WHERE i.quote_id = q.id), '[]') as items
        FROM quotes q
        WHERE q.user_id = ?
        ORDER BY q.created_at DESC`,
@@ -32,8 +35,8 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({
       quotes: quotes.map(q => ({
         ...q,
-        customer: JSON.parse(q.customer),
-        items: JSON.parse(q.items)
+        customer: typeof q.customer === 'string' ? JSON.parse(q.customer) : q.customer,
+        items: typeof q.items === 'string' ? JSON.parse(q.items) : (q.items || [])
       })),
       total: quotes.length
     });
@@ -48,21 +51,21 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/:quoteId', authMiddleware, async (req, res) => {
   try {
     const [quote] = await db.query(
-      `SELECT q.*, 
-       JSON_OBJECT(
-         'name', q.customer_name,
-         'email', q.customer_email,
-         'phone', q.customer_phone,
-         'address', q.customer_address
-       ) as customer,
-       (SELECT JSON_ARRAYAGG(
+      `SELECT q.*,
+       COALESCE(JSON_OBJECT(
+         'name', COALESCE(q.customer_name, ''),
+         'email', COALESCE(q.customer_email, ''),
+         'phone', COALESCE(q.customer_phone, ''),
+         'address', COALESCE(q.customer_address, '')
+       ), '{}') as customer,
+       COALESCE((SELECT JSON_ARRAYAGG(
          JSON_OBJECT(
            'id', i.id,
-           'description', i.description,
-           'quantity', i.quantity,
-           'unitPrice', i.unit_price
+           'description', COALESCE(i.description, ''),
+           'quantity', COALESCE(i.quantity, 0),
+           'unitPrice', COALESCE(i.unit_price, 0)
          )
-       ) FROM service_items i WHERE i.quote_id = q.id) as items
+       ) FROM service_items i WHERE i.quote_id = q.id), '[]') as items
        FROM quotes q
        WHERE q.id = ? AND q.user_id = ?`,
       [req.params.quoteId, req.user.id]
@@ -74,8 +77,8 @@ router.get('/:quoteId', authMiddleware, async (req, res) => {
 
     res.json({
       ...quote,
-      customer: JSON.parse(quote.customer),
-      items: JSON.parse(quote.items)
+      customer: typeof quote.customer === 'string' ? JSON.parse(quote.customer) : quote.customer,
+      items: typeof quote.items === 'string' ? JSON.parse(quote.items) : (quote.items || [])
     });
   } catch (err) {
     console.error(err.message);
@@ -137,36 +140,33 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // Add service items
     if (items && items.length > 0) {
-      await db.execute(
-        `INSERT INTO service_items 
-         (quote_id, description, quantity, unit_price)
-         VALUES ?`,
-        [items.map(item => [
-          quoteId,
-          item.description,
-          item.quantity,
-          item.unitPrice
-        ])]
-      );
+      for (const item of items) {
+        await db.execute(
+          `INSERT INTO service_items
+           (quote_id, description, quantity, unit_price)
+           VALUES (?, ?, ?, ?)`,
+          [quoteId, item.description, item.quantity, item.unitPrice]
+        );
+      }
     }
 
     // Get full quote with items
     const [newQuote] = await db.query(
-      `SELECT q.*, 
-       JSON_OBJECT(
-         'name', q.customer_name,
-         'email', q.customer_email,
-         'phone', q.customer_phone,
-         'address', q.customer_address
-       ) as customer,
-       (SELECT JSON_ARRAYAGG(
+      `SELECT q.*,
+       COALESCE(JSON_OBJECT(
+         'name', COALESCE(q.customer_name, ''),
+         'email', COALESCE(q.customer_email, ''),
+         'phone', COALESCE(q.customer_phone, ''),
+         'address', COALESCE(q.customer_address, '')
+       ), '{}') as customer,
+       COALESCE((SELECT JSON_ARRAYAGG(
          JSON_OBJECT(
            'id', i.id,
-           'description', i.description,
-           'quantity', i.quantity,
-           'unitPrice', i.unit_price
+           'description', COALESCE(i.description, ''),
+           'quantity', COALESCE(i.quantity, 0),
+           'unitPrice', COALESCE(i.unit_price, 0)
          )
-       ) FROM service_items i WHERE i.quote_id = q.id) as items
+       ) FROM service_items i WHERE i.quote_id = q.id), '[]') as items
        FROM quotes q
        WHERE q.id = ?`,
       [quoteId]
@@ -174,8 +174,8 @@ router.post('/', authMiddleware, async (req, res) => {
 
     res.status(201).json({
       ...newQuote,
-      customer: JSON.parse(newQuote.customer),
-      items: JSON.parse(newQuote.items)
+      customer: typeof newQuote.customer === 'string' ? JSON.parse(newQuote.customer) : newQuote.customer,
+      items: typeof newQuote.items === 'string' ? JSON.parse(newQuote.items) : (newQuote.items || [])
     });
   } catch (err) {
     console.error(err.message);
@@ -223,36 +223,33 @@ router.put('/:quoteId', authMiddleware, async (req, res) => {
 
     // Add updated items
     if (items && items.length > 0) {
-      await db.execute(
-        `INSERT INTO service_items 
-         (quote_id, description, quantity, unit_price)
-         VALUES ?`,
-        [items.map(item => [
-          req.params.quoteId,
-          item.description,
-          item.quantity,
-          item.unitPrice
-        ])]
-      );
+      for (const item of items) {
+        await db.execute(
+          `INSERT INTO service_items
+           (quote_id, description, quantity, unit_price)
+           VALUES (?, ?, ?, ?)`,
+          [req.params.quoteId, item.description, item.quantity, item.unitPrice]
+        );
+      }
     }
 
     // Get full updated quote
     const [updatedQuote] = await db.query(
-      `SELECT q.*, 
-       JSON_OBJECT(
-         'name', q.customer_name,
-         'email', q.customer_email,
-         'phone', q.customer_phone,
-         'address', q.customer_address
-       ) as customer,
-       (SELECT JSON_ARRAYAGG(
+      `SELECT q.*,
+       COALESCE(JSON_OBJECT(
+         'name', COALESCE(q.customer_name, ''),
+         'email', COALESCE(q.customer_email, ''),
+         'phone', COALESCE(q.customer_phone, ''),
+         'address', COALESCE(q.customer_address, '')
+       ), '{}') as customer,
+       COALESCE((SELECT JSON_ARRAYAGG(
          JSON_OBJECT(
            'id', i.id,
-           'description', i.description,
-           'quantity', i.quantity,
-           'unitPrice', i.unit_price
+           'description', COALESCE(i.description, ''),
+           'quantity', COALESCE(i.quantity, 0),
+           'unitPrice', COALESCE(i.unit_price, 0)
          )
-       ) FROM service_items i WHERE i.quote_id = q.id) as items
+       ) FROM service_items i WHERE i.quote_id = q.id), '[]') as items
        FROM quotes q
        WHERE q.id = ?`,
       [req.params.quoteId]
@@ -260,8 +257,8 @@ router.put('/:quoteId', authMiddleware, async (req, res) => {
 
     res.json({
       ...updatedQuote,
-      customer: JSON.parse(updatedQuote.customer),
-      items: JSON.parse(updatedQuote.items)
+      customer: typeof updatedQuote.customer === 'string' ? JSON.parse(updatedQuote.customer) : updatedQuote.customer,
+      items: typeof updatedQuote.items === 'string' ? JSON.parse(updatedQuote.items) : (updatedQuote.items || [])
     });
   } catch (err) {
     console.error(err.message);
@@ -330,8 +327,48 @@ router.post('/new', authMiddleware, async (req, res) => {
 // @route   GET /quotes/:quoteId/pdf
 // @desc    Generate PDF for quote
 router.get('/:quoteId/pdf', authMiddleware, async (req, res) => {
-  // TODO: Implement PDF generation
-  res.status(501).json({ error: 'PDF generation not yet implemented' });
+  try {
+    const [quote] = await db.query(
+      `SELECT q.*,
+       COALESCE(JSON_OBJECT(
+         'name', COALESCE(q.customer_name, ''),
+         'email', COALESCE(q.customer_email, ''),
+         'phone', COALESCE(q.customer_phone, ''),
+         'address', COALESCE(q.customer_address, '')
+       ), '{}') as customer,
+       COALESCE((SELECT JSON_ARRAYAGG(
+         JSON_OBJECT(
+           'id', i.id,
+           'description', COALESCE(i.description, ''),
+           'quantity', COALESCE(i.quantity, 0),
+           'unitPrice', COALESCE(i.unit_price, 0)
+         )
+       ) FROM service_items i WHERE i.quote_id = q.id), '[]') as items
+       FROM quotes q
+       WHERE q.id = ? AND q.user_id = ?`,
+      [req.params.quoteId, req.user.id]
+    );
+
+    if (!quote) {
+      return res.status(404).json({ error: 'Quote not found' });
+    }
+
+    const quoteData = {
+      ...quote,
+      customer: typeof quote.customer === 'string' ? JSON.parse(quote.customer) : quote.customer,
+      items: typeof quote.items === 'string' ? JSON.parse(quote.items) : (quote.items || [])
+    };
+
+    const { generateQuotePDF } = require('../services/pdfService');
+    const pdfBuffer = await generateQuotePDF(quoteData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="quote-${quote.quote_number}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Failed to generate PDF' });
+  }
 });
 
 module.exports = router;

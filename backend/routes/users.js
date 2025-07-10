@@ -6,6 +6,14 @@ const db = require('../config/database');
 const authMiddleware = require('../middlewares/auth');
 const router = express.Router();
 
+// Admin middleware
+const adminMiddleware = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
 // Ensure upload directory exists
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 if (!fs.existsSync(uploadDir)) {
@@ -78,6 +86,45 @@ router.post('/:userId/logo', authMiddleware, upload.single('logo'), async (req, 
     );
 
     res.json({ logoUrl });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// @route   GET /users/all
+// @desc    Get all users (admin only)
+router.get('/all', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const users = await db.query(`
+      SELECT
+        id,
+        email,
+        role,
+        business_name,
+        business_phone,
+        business_address,
+        logo_url,
+        created_at
+      FROM users
+      ORDER BY created_at DESC
+    `);
+
+    res.json({
+      users: users.map(user => ({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        businessInfo: {
+          name: user.business_name,
+          phone: user.business_phone,
+          address: user.business_address,
+          logoUrl: user.logo_url
+        },
+        createdAt: user.created_at
+      })),
+      total: users.length
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Server error' });
