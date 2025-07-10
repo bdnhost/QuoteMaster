@@ -62,12 +62,15 @@ const LandingPage: React.FC = () => {
                             <p className="mt-6 max-w-2xl mx-auto text-lg text-slate-600">
                                 תפסיק לבזבז זמן על Word ו-Excel. עם QuoteMaster Pro, תוכל ליצור, לשלוח ולעקוב אחר הצעות מחיר מדהימות שיסגרו לך יותר עסקאות.
                             </p>
-                            <div className="mt-10">
+                            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
                                 <a href="#/login" className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg transition-transform transform hover:scale-105">
                                     התחל עכשיו (זה בחינם!)
                                 </a>
-                                <p className="mt-4 text-sm text-slate-500">ללא צורך בכרטיס אשראי.</p>
+                                <a href="#/quotedebug" className="px-6 py-3 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                                    🔧 דף בדיקות מערכת
+                                </a>
                             </div>
+                            <p className="mt-4 text-sm text-slate-500">ללא צורך בכרטיס אשראי.</p>
                         </div>
                     </div>
                 </section>
