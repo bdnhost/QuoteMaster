@@ -1,11 +1,17 @@
 # 🚀 הגדרת Vercel - QuoteMaster Pro
 
+## 📋 פרטי הפרויקט
+
+- **Project ID**: `prj_3kmmGAkrdy6bKGb6RjkGzchPIrRQ`
+- **Dashboard**: https://vercel.com/dashboard
+- **Project URL**: https://quote-master-eight.vercel.app/
+
 ## 📋 משתני סביבה ליבוא ב-Vercel
 
 ### שלב 1: כניסה ל-Vercel Dashboard
 
 1. לך ל-https://vercel.com/dashboard
-2. בחר את הפרויקט **QuoteMaster**
+2. בחר את הפרויקט **QuoteMaster** (ID: prj_3kmmGAkrdy6bKGb6RjkGzchPIrRQ)
 3. לחץ על **Settings**
 4. לחץ על **Environment Variables**
 
@@ -81,6 +87,18 @@ Environments: ✅ Development
 4. לחץ על **Redeploy**
 5. בחר **Use existing Build Cache** = לא מסומן
 6. לחץ על **Redeploy**
+
+### שלב 4: פריסה ישירה מהטרמינל (אופציונלי)
+
+אם יש לך Vercel CLI מותקן, תוכל לפרוס ישירות מהטרמינל:
+
+```bash
+# התקנת Vercel CLI (אם לא מותקן)
+npm i -g vercel
+
+# פריסה עם Project ID ספציפי
+vercel --prod --scope bdnhost --yes --token YOUR_VERCEL_TOKEN --cwd . --project prj_3kmmGAkrdy6bKGb6RjkGzchPIrRQ
+```
 
 ## 🔍 בדיקה
 
