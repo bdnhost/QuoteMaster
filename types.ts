@@ -39,7 +39,16 @@ export interface User {
     id: string;
     email: string;
     role: 'admin' | 'user';
-    businessInfo: BusinessInfo;
+    is_super_admin?: boolean;
+    business_name?: string;
+    business_phone?: string;
+    business_address?: string;
+    logo_url?: string;
+    stripe_customer_id?: string;
+    created_at: string;
+    updated_at: string;
+    // Legacy support
+    businessInfo?: BusinessInfo;
     createdAt?: string;
 }
 
@@ -128,4 +137,125 @@ export interface QuoteTemplate {
     createdBy?: string;
     createdAt: string;
     updatedAt: string;
+}
+
+// New types for admin system
+export interface PaymentProvider {
+    id: string;
+    name: string;
+    display_name: string;
+    is_active: boolean;
+    config: any;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PaymentTransaction {
+    id: string;
+    invoice_id: string;
+    provider_id: string;
+    external_transaction_id: string;
+    amount: number;
+    currency: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+    provider_response: any;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface SubscriptionPlan {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    billing_interval: 'monthly' | 'yearly';
+    features: {
+        max_quotes: number;
+        max_storage_mb: number;
+        support: string;
+        custom_branding?: boolean;
+        api_access?: boolean;
+        advanced_analytics?: boolean;
+    };
+    is_active: boolean;
+    stripe_price_id?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface UserSubscription {
+    id: string;
+    user_id: string;
+    plan_id: string;
+    stripe_subscription_id?: string;
+    status: 'active' | 'canceled' | 'past_due' | 'unpaid';
+    current_period_start: string;
+    current_period_end: string;
+    cancel_at_period_end: boolean;
+    created_at: string;
+    updated_at: string;
+    subscription_plans?: SubscriptionPlan;
+}
+
+export interface SystemSetting {
+    id: string;
+    key: string;
+    value: any;
+    description: string;
+    category: string;
+    is_public: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface EmailTemplate {
+    id: string;
+    name: string;
+    subject: string;
+    html_content: string;
+    text_content?: string;
+    variables: string[];
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Notification {
+    id: string;
+    user_id: string;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    is_read: boolean;
+    action_url?: string;
+    metadata: any;
+    created_at: string;
+}
+
+export interface FileUpload {
+    id: string;
+    user_id: string;
+    filename: string;
+    original_filename: string;
+    file_size: number;
+    mime_type: string;
+    storage_path: string;
+    is_public: boolean;
+    metadata: any;
+    created_at: string;
+}
+
+export interface DailyStat {
+    id: string;
+    date: string;
+    total_users: number;
+    new_users: number;
+    total_quotes: number;
+    new_quotes: number;
+    total_invoices: number;
+    new_invoices: number;
+    total_revenue: number;
+    new_revenue: number;
+    created_at: string;
 }

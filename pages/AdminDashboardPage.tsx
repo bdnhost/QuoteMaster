@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
-import * as api from '../services/apiService';
+import { PermissionManager } from '../lib/permissions';
+import { supabase } from '../lib/supabase';
+import { StripeService } from '../services/stripeService';
 import type { Quote, User, ActivityLog, SystemSettings } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -18,26 +20,43 @@ const AdminDashboardPage: React.FC = () => {
     const [updatingUserRole, setUpdatingUserRole] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const checkPermissionsAndFetchData = async () => {
             try {
-                const quotesData = await api.getQuotes();
-                setQuotes(quotesData);
-                
-                const [usersData, activityData, settingsData] = await Promise.all([
-                    api.getAllUsers(),
-                    api.getActivityLog(1, 20),
-                    api.getSystemSettings()
+                // Check admin permissions first
+                await PermissionManager.requireAdmin();
+
+                // Fetch data using Supabase directly for better RLS support
+                const [quotesResult, usersResult, activityResult] = await Promise.all([
+                    PermissionManager.getAccessibleQuotes(),
+                    PermissionManager.getAccessibleUsers(),
+                    PermissionManager.getAccessibleActivityLogs()
                 ]);
-                setUsers(usersData);
-                setActivityLog(activityData.activities);
-                setSettings(settingsData);
+
+                if (quotesResult.data) setQuotes(quotesResult.data);
+                if (usersResult.data) setUsers(usersResult.data);
+                if (activityResult.data) setActivityLog(activityResult.data);
+
+                // Load system settings if super admin
+                const canManageSettings = await PermissionManager.canManageSystemSettings();
+                if (canManageSettings) {
+                    const { data: settingsData } = await supabase
+                        .from('system_settings')
+                        .select('*');
+
+                    const settingsObj: SystemSettings = {};
+                    settingsData?.forEach(setting => {
+                        settingsObj[setting.key] = setting.value;
+                    });
+                    setSettings(settingsObj);
+                }
             } catch (error) {
-                console.error("Failed to fetch admin data", error);
+                console.error("Failed to fetch admin data or insufficient permissions", error);
+                // Redirect to unauthorized page or show error
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchData();
+        checkPermissionsAndFetchData();
     }, []);
 
     const handleStatusChange = async (quoteId: string, newStatus: 'draft' | 'sent' | 'approved' | 'rejected') => {
