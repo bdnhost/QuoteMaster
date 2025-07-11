@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import type { User, BusinessInfo } from '../types';
 import * as api from '../services/apiService';
@@ -11,6 +10,7 @@ interface AuthContextType {
   logout: () => void;
   register: (email: string, password: string, businessName: string, businessPhone: string, businessAddress: string) => Promise<User | null>;
   updateUserBusinessInfo: (businessInfo: BusinessInfo) => Promise<User | null>;
+  checkAuthStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,20 +18,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  const checkAuthStatus = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      setIsLoading(false);
+      setAuthInitialized(true);
+      return;
+    }
+
+    try {
+      const currentUser = await api.getLoggedInUser();
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        // Token is invalid, remove it
+        localStorage.removeItem('token');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      // Clear invalid token
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+      setAuthInitialized(true);
+    }
+  };
 
   useEffect(() => {
-    const checkLoggedIn = async () => {
-      setIsLoading(true);
-      try {
-        const currentUser = await api.getLoggedInUser();
-        setUser(currentUser);
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkLoggedIn();
+    checkAuthStatus();
   }, []);
 
   const login = async (email: string, pass: string) => {
@@ -42,6 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return loggedInUser;
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('token'); // Clear any invalid token
       throw error;
     } finally {
       setIsLoading(false);
@@ -56,6 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return newUser;
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('token'); // Clear any invalid token
       throw error;
     } finally {
       setIsLoading(false);
@@ -65,6 +86,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     api.logout();
     setUser(null);
+    localStorage.removeItem('token');
+    // Redirect to landing page
+    window.location.hash = '#/landing';
   };
   
   const updateUserBusinessInfo = async (businessInfo: BusinessInfo) => {
@@ -86,13 +110,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && authInitialized,
     isLoading,
     login,
     logout,
     register,
     updateUserBusinessInfo,
+    checkAuthStatus,
   };
+
+  // Don't render children until auth is initialized
+  if (!authInitialized) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
