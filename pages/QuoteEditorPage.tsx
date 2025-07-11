@@ -17,61 +17,73 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const { user } = useAuth();
+  const { user, isAuthenticated, checkAuthStatus } = useAuth();
+
+  // Check authentication on mount and route change
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      window.location.hash = '#/login';
+      return;
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    let isCancelled = false;
-
     const loadQuote = async () => {
+      if (!isAuthenticated || !user) {
+        console.log('Cannot load quote: user not authenticated');
+        setError('נדרשת התחברות למערכת');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
+      
       try {
         let quoteData;
+        
         if (quoteId === 'new') {
-          if(!user) throw new Error("User not found");
+          console.log('Creating new quote for user:', user.email);
           quoteData = await api.getNewQuote(user.businessInfo);
         } else if (quoteId) {
+          console.log('Loading existing quote:', quoteId);
           quoteData = await api.getQuote(quoteId);
         } else {
           throw new Error("No quote ID provided.");
         }
-
-        if (!isCancelled) {
-          // Ensure the quote has all required fields
-          const safeQuote: Quote = {
-            id: quoteData.id || '',
-            quoteNumber: quoteData.quoteNumber || '',
-            businessInfo: quoteData.businessInfo || { name: '', phone: '', address: '', logoUrl: null },
-            customer: quoteData.customer || { name: '', email: '', phone: '', address: '' },
-            items: quoteData.items || [],
-            notes: quoteData.notes || '',
-            issueDate: quoteData.issueDate || '',
-            validUntil: quoteData.validUntil || '',
-            taxRate: quoteData.taxRate || 17,
-            status: quoteData.status || 'draft'
-          };
-          setQuote(safeQuote);
-        }
+        
+        console.log('Quote loaded successfully:', quoteData);
+        setQuote(quoteData);
       } catch (err) {
-        if (!isCancelled) {
-          console.error('Error loading quote:', err);
-          setError(err instanceof Error ? err.message : "Failed to load quote data.");
+        console.error('Error loading quote:', err);
+        
+        if (err instanceof Error) {
+          if (err.message.includes('Not authenticated')) {
+            setError('נדרשת התחברות מחדש למערכת');
+            // Check auth status and potentially redirect
+            checkAuthStatus().then(() => {
+              if (!isAuthenticated) {
+                window.location.hash = '#/login';
+              }
+            });
+          } else if (err.message.includes('Quote not found')) {
+            setError('הצעת המחיר לא נמצאה');
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError("שגיאה בטעינת נתוני ההצעה");
         }
       } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
-    if (user) {
-        loadQuote();
+    if (user && isAuthenticated) {
+      loadQuote();
     }
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [quoteId, user]);
+  }, [quoteId, user, isAuthenticated, checkAuthStatus]);
 
   const handleQuoteChange = useCallback((newQuote: Quote) => {
     setQuote(newQuote);
@@ -79,19 +91,40 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
 
   const handleSave = async () => {
     if (!quote) return;
+    
+    if (!isAuthenticated || !user) {
+      setError('נדרשת התחברות למערכת');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
+    
     try {
+      console.log('Saving quote:', quote);
       const savedQuote = await api.saveQuote(quote);
+      console.log('Quote saved successfully:', savedQuote);
+      
       setQuote(savedQuote);
       
       // On successful save of a new quote, update the URL to reflect its new ID
       if (quoteId === 'new' && savedQuote.id) {
+          console.log('Redirecting to saved quote:', savedQuote.id);
           window.location.hash = `#/quotes/${savedQuote.id}`;
       }
     } catch (err) {
         console.error('Error saving quote:', err);
-        setError(err instanceof Error ? err.message : "Failed to save quote.");
+        
+        if (err instanceof Error) {
+          if (err.message.includes('Not authenticated')) {
+            setError('נדרשת התחברות מחדש למערכת');
+            checkAuthStatus();
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError("שגיאה בשמירת ההצעה");
+        }
     } finally {
         setIsSaving(false);
     }
@@ -107,6 +140,11 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
       return;
     }
 
+    if (!isAuthenticated) {
+      setError('נדרשת התחברות למערכת');
+      return;
+    }
+
     try {
       await api.downloadQuotePDF(quote.id);
     } catch (error) {
@@ -114,6 +152,7 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
       if (error instanceof Error) {
         if (error.message.includes('Not authenticated')) {
           setError('נדרשת התחברות מחדש. אנא התחבר שוב.');
+          checkAuthStatus();
         } else if (error.message.includes('Quote not found')) {
           setError('הצעת המחיר לא נמצאה.');
         } else {
@@ -126,58 +165,65 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
   };
 
   const handleStatusChange = async (newStatus: 'draft' | 'sent' | 'approved' | 'rejected') => {
-    if (!quote?.id) return;
+    if (!quote?.id || !isAuthenticated) return;
 
     setUpdatingStatus(true);
-    setError(null);
     try {
       const updatedQuote = await api.updateQuoteStatus(quote.id, newStatus);
       setQuote(updatedQuote);
     } catch (error) {
       console.error('Status update error:', error);
-      setError('שגיאה בעדכון סטטוס ההצעה. אנא נסה שוב.');
+      if (error instanceof Error && error.message.includes('Not authenticated')) {
+        setError('נדרשת התחברות מחדש למערכת');
+        checkAuthStatus();
+      } else {
+        setError('שגיאה בעדכון סטטוס ההצעה. אנא נסה שוב.');
+      }
     } finally {
       setUpdatingStatus(false);
     }
   };
 
+  // Show loading state
   if (isLoading) {
     return (
       <div className="text-center p-8">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-        <p className="mt-4 text-slate-600">טוען נתונים...</p>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p>טוען נתונים...</p>
       </div>
     );
   }
 
+  // Show error state
   if (error) {
     return (
       <div className="text-center p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-red-800 mb-2">שגיאה</h3>
-          <p className="text-red-600">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            נסה שוב
-          </button>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mx-auto max-w-md">
+          <h3 className="font-semibold mb-2">שגיאה</h3>
+          <p>{error}</p>
+          <div className="mt-4 space-x-2">
+            <Button onClick={() => window.location.hash = '#/dashboard'} variant="secondary">
+              חזור לדשבורד
+            </Button>
+            {error.includes('התחברות') && (
+              <Button onClick={() => window.location.hash = '#/login'}>
+                התחבר מחדש
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
+  // Show not found state
   if (!quote) {
     return (
       <div className="text-center p-8">
-        <h3 className="text-lg font-medium text-slate-800">לא נמצאה הצעת מחיר</h3>
-        <p className="text-slate-600 mt-2">אנא נסה שוב או צור הצעה חדשה.</p>
-        <button 
-          onClick={() => window.location.hash = '#/quotes/new'} 
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          צור הצעה חדשה
-        </button>
+        <h3 className="text-lg font-medium text-slate-800 mb-4">לא נמצאה הצעת מחיר</h3>
+        <Button onClick={() => window.location.hash = '#/dashboard'} variant="secondary">
+          חזור לדשבורד
+        </Button>
       </div>
     );
   }
@@ -208,19 +254,6 @@ const QuoteEditorPage: React.FC<QuoteEditorPageProps> = ({ quoteId }) => {
             </Button>
         </div>
       </div>
-
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">{error}</p>
-          <button 
-            onClick={() => setError(null)} 
-            className="mt-2 text-sm text-red-500 hover:text-red-700"
-          >
-            סגור הודעה
-          </button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
         <div className="no-print">
           <QuoteForm quote={quote} onQuoteChange={handleQuoteChange} />
