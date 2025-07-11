@@ -3,20 +3,47 @@ import type { Quote, User, BusinessInfo, PaymentMethod, Invoice, SystemSettings,
 // --- API Service Functions ---
 export const API_BASE_URL = 'http://localhost:3001';
 
-// פונקציה עזר ליצירת quote בטוח
-const createSafeQuote = (data: any): Quote => {
-  return {
-    id: data.id || '',
-    quoteNumber: data.quoteNumber || '',
-    businessInfo: data.businessInfo || { name: '', phone: '', address: '', logoUrl: null },
-    customer: data.customer || { name: '', email: '', phone: '', address: '' },
-    items: Array.isArray(data.items) ? data.items : [],
-    notes: data.notes || '',
-    issueDate: data.issueDate || '',
-    validUntil: data.validUntil || '',
-    taxRate: typeof data.taxRate === 'number' ? data.taxRate : 17,
-    status: data.status || 'draft'
+// Helper function to handle auth errors
+const handleAuthError = (error: any) => {
+  if (error.message?.includes('401') || error.message?.includes('Unauthorized') || error.message?.includes('Token')) {
+    localStorage.removeItem('token');
+    throw new Error('Not authenticated');
+  }
+  throw error;
+};
+
+// Helper function to make authenticated requests
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers,
   };
+
+  try {
+    const response = await fetch(url, { ...options, headers });
+    
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      throw new Error('Not authenticated');
+    }
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API Error ${response.status}:`, errorText);
+      throw new Error(`API Error: ${response.status}`);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('Authenticated fetch error:', error);
+    handleAuthError(error);
+  }
 };
 
 export const register = async (email: string, password: string, businessName: string, businessPhone: string, businessAddress: string): Promise<User> => {
@@ -32,16 +59,20 @@ export const register = async (email: string, password: string, businessName: st
         if (!response.ok) {
             const errorData = await response.text();
             console.error('Registration error:', errorData);
+            if (response.status === 400) {
+                throw new Error('User already exists');
+            }
             throw new Error('Registration failed');
         }
 
         const data = await response.json();
-        if (data.token) {
-            localStorage.setItem('token', data.token);
-        }
+        localStorage.setItem('token', data.token);
         return data.user;
     } catch (error) {
         console.error('Registration error:', error);
+        if (error instanceof Error) {
+            throw error;
+        }
         throw new Error('Registration failed');
     }
 };
@@ -62,29 +93,36 @@ export const login = async (email: string, pass: string): Promise<User> => {
         if (!response.ok) {
             const errorData = await response.text();
             console.error('Login error:', errorData);
-            throw new Error('Invalid credentials');
+            if (response.status === 400 || response.status === 401) {
+                throw new Error('Invalid credentials');
+            }
+            throw new Error('Login failed');
         }
 
         const data = await response.json();
         console.log('Login successful:', data);
-        if (data.token) {
-            localStorage.setItem('token', data.token);
-        }
+        localStorage.setItem('token', data.token);
         return data.user;
     } catch (error) {
         console.error('Login error:', error);
+        if (error instanceof Error) {
+            throw error;
+        }
         throw new Error('Login failed');
     }
 };
 
 export const logout = async (): Promise<void> => {
     try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
+        const token = localStorage.getItem('token');
+        if (token) {
+            await fetch(`${API_BASE_URL}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        }
     } catch (error) {
         console.error('Logout failed:', error);
     } finally {
@@ -97,16 +135,7 @@ export const getLoggedInUser = async (): Promise<User | null> => {
     if (!token) return null;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Not authenticated');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/auth/me`);
         return await response.json();
     } catch (error) {
         console.error('Failed to get user:', error);
@@ -116,18 +145,10 @@ export const getLoggedInUser = async (): Promise<User | null> => {
 
 export const updateUserBusinessInfo = async (userId: string, businessInfo: BusinessInfo): Promise<User> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/business-info`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/users/${userId}/business-info`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
             body: JSON.stringify(businessInfo)
         });
-
-        if (!response.ok) {
-            throw new Error('Failed to update business info');
-        }
 
         return await response.json();
     } catch (error) {
@@ -138,25 +159,12 @@ export const updateUserBusinessInfo = async (userId: string, businessInfo: Busin
 
 export const getQuotes = async (): Promise<Quote[]> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/quotes`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch quotes');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/quotes`);
         const data = await response.json();
         console.log('Raw quotes response:', data);
 
         // The API returns { quotes: Quote[], total: number }
-        const quotes = data.quotes || [];
-        return quotes.map((quote: any) => createSafeQuote(quote));
+        return data.quotes || [];
     } catch (error) {
         console.error('Error fetching quotes:', error);
         throw error;
@@ -165,52 +173,30 @@ export const getQuotes = async (): Promise<Quote[]> => {
 
 export const getQuote = async (id: string): Promise<Quote> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/quotes/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Quote not found');
-        }
-
-        const data = await response.json();
-        return createSafeQuote(data);
+        const response = await authenticatedFetch(`${API_BASE_URL}/quotes/${id}`);
+        return await response.json();
     } catch (error) {
         console.error('Error fetching quote:', error);
+        if (error instanceof Error && error.message.includes('404')) {
+            throw new Error('Quote not found');
+        }
         throw error;
     }
 };
 
 export const saveQuote = async (quoteToSave: Quote): Promise<Quote> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
         const method = quoteToSave.id ? 'PUT' : 'POST';
         const url = quoteToSave.id 
             ? `${API_BASE_URL}/quotes/${quoteToSave.id}`
             : `${API_BASE_URL}/quotes`;
 
-        const response = await fetch(url, {
+        const response = await authenticatedFetch(url, {
             method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify(quoteToSave)
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to save quote');
-        }
-
-        const data = await response.json();
-        return createSafeQuote(data);
+        return await response.json();
     } catch (error) {
         console.error('Error saving quote:', error);
         throw error;
@@ -219,24 +205,16 @@ export const saveQuote = async (quoteToSave: Quote): Promise<Quote> => {
 
 export const getNewQuote = async (businessInfo: BusinessInfo): Promise<Quote> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/quotes/new`, {
+        console.log('Creating new quote with business info:', businessInfo);
+        
+        const response = await authenticatedFetch(`${API_BASE_URL}/quotes/new`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({ businessInfo })
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to create new quote');
-        }
-
-        const data = await response.json();
-        return createSafeQuote(data);
+        const newQuote = await response.json();
+        console.log('New quote created:', newQuote);
+        return newQuote;
     } catch (error) {
         console.error('Error creating new quote:', error);
         throw error;
@@ -245,18 +223,7 @@ export const getNewQuote = async (businessInfo: BusinessInfo): Promise<Quote> =>
 
 export const downloadQuotePDF = async (quoteId: string): Promise<void> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}/pdf`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to generate PDF');
-        }
+        const response = await authenticatedFetch(`${API_BASE_URL}/quotes/${quoteId}/pdf`);
 
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -290,6 +257,11 @@ export const uploadLogo = async (userId: string, file: File): Promise<string> =>
             body: formData
         });
 
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            throw new Error('Not authenticated');
+        }
+
         if (!response.ok) {
             throw new Error('Failed to upload logo');
         }
@@ -304,30 +276,18 @@ export const uploadLogo = async (userId: string, file: File): Promise<string> =>
 
 export const updateQuoteStatus = async (quoteId: string, status: 'draft' | 'sent' | 'approved' | 'rejected'): Promise<Quote> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
         // First get the current quote
         const currentQuote = await getQuote(quoteId);
 
         // Update only the status
         const updatedQuote = { ...currentQuote, status };
 
-        const response = await fetch(`${API_BASE_URL}/quotes/${quoteId}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/quotes/${quoteId}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify(updatedQuote)
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to update quote status');
-        }
-
-        const data = await response.json();
-        return createSafeQuote(data);
+        return await response.json();
     } catch (error) {
         console.error('Error updating quote status:', error);
         throw error;
@@ -336,19 +296,7 @@ export const updateQuoteStatus = async (quoteId: string, status: 'draft' | 'sent
 
 export const getAllUsers = async (): Promise<User[]> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/users/all`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch users');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/users/all`);
         const data = await response.json();
         return data.users || [];
     } catch (error) {
@@ -360,19 +308,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 // Payment System APIs
 export const getPaymentMethods = async (): Promise<PaymentMethod[]> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/payments/methods`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch payment methods');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/payments/methods`);
         const data = await response.json();
         return data.methods || [];
     } catch (error) {
@@ -383,19 +319,7 @@ export const getPaymentMethods = async (): Promise<PaymentMethod[]> => {
 
 export const getInvoices = async (): Promise<Invoice[]> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/payments/invoices`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch invoices');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/payments/invoices`);
         const data = await response.json();
         return data.invoices || [];
     } catch (error) {
@@ -406,21 +330,10 @@ export const getInvoices = async (): Promise<Invoice[]> => {
 
 export const createInvoiceFromQuote = async (quoteId: string, dueDate: string, notes?: string): Promise<Invoice> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/payments/invoices`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/payments/invoices`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({ quoteId, dueDate, notes })
         });
-
-        if (!response.ok) {
-            throw new Error('Failed to create invoice');
-        }
 
         return await response.json();
     } catch (error) {
@@ -432,19 +345,7 @@ export const createInvoiceFromQuote = async (quoteId: string, dueDate: string, n
 // Settings APIs
 export const getSystemSettings = async (): Promise<SystemSettings> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/settings`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch settings');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/settings`);
         const data = await response.json();
         return data.settings || {};
     } catch (error) {
@@ -455,21 +356,10 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
 
 export const updateSystemSettings = async (settings: SystemSettings): Promise<void> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/settings`, {
+        await authenticatedFetch(`${API_BASE_URL}/settings`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({ settings })
         });
-
-        if (!response.ok) {
-            throw new Error('Failed to update settings');
-        }
     } catch (error) {
         console.error('Error updating settings:', error);
         throw error;
@@ -478,19 +368,7 @@ export const updateSystemSettings = async (settings: SystemSettings): Promise<vo
 
 export const getActivityLog = async (page = 1, limit = 50): Promise<{ activities: ActivityLog[], pagination: any }> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/settings/activity-log?page=${page}&limit=${limit}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch activity log');
-        }
-
+        const response = await authenticatedFetch(`${API_BASE_URL}/settings/activity-log?page=${page}&limit=${limit}`);
         return await response.json();
     } catch (error) {
         console.error('Error fetching activity log:', error);
@@ -500,21 +378,10 @@ export const getActivityLog = async (page = 1, limit = 50): Promise<{ activities
 
 export const updateUserRole = async (userId: string, role: 'admin' | 'user'): Promise<void> => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-
-        const response = await fetch(`${API_BASE_URL}/settings/users/${userId}/role`, {
+        await authenticatedFetch(`${API_BASE_URL}/settings/users/${userId}/role`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({ role })
         });
-
-        if (!response.ok) {
-            throw new Error('Failed to update user role');
-        }
     } catch (error) {
         console.error('Error updating user role:', error);
         throw error;
